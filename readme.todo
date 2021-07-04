@@ -1,0 +1,76 @@
+Shmup vs game
+The player controls a flying ship on their side of the screen.
+
+Goal: Destroy the other ship
+
+Types of shots/abilities
+* Small, fast shot
+* Slow moving, larger shot, can adjust aim a bit up/down if shot while moving
+* Shield
+* Slow shot that explodes (hold down button to charge?)
+* Dash - quick burst movement
+* Laser super - constant stream attack, uses most magic power
+
+Health bar
+Magic power bar - regenerates, used to shoot
+
+Setup:
+  ✔ Rectangular arena - mark halfway @done(21-06-26 16:25)
+  ✔ Ship that can move around your side @done(21-06-26 16:25)
+
+Basic shooting:
+  ✔ Shoot fast shots that disappear when hitting wall/enemy @done(21-06-26 17:52)
+
+Health bar:
+  ✔ Start with 100 hp @done(21-06-26 18:13)
+  ✔ Decreases when you take damage @done(21-06-26 18:13)
+
+Simulation Setup:
+  ✔ Separate Simulation class @done(21-07-03 15:30)
+  ✔ Pass input to it @done(21-07-03 15:30)
+  ✔ Update it each frame @done(21-07-03 15:30)
+  ✔ After update, update character/bullet positions @done(21-07-03 15:30)
+
+KeyHandler:
+  ☐ Move to using key up handler
+
+Magic Bar:
+  ✔ Start at 10? @done(21-07-03 16:52)
+  ✔ Decreases when you shoot @done(21-07-03 16:52)
+  ✔ Regenerates automatically @done(21-07-03 16:52)
+
+Slow Moving Bullet:
+  ✔ New bullet type @done(21-07-03 17:14)
+  ✔ New Graphic @done(21-07-03 17:14)
+  ✔ Speed/energy cost @done(21-07-03 17:14)
+  ✔ Adjust to movement @done(21-07-03 17:14)
+
+AI:
+  ✔ Record player movement/attacks and play it back to generate enemy behavior @done(21-07-03 16:27)
+    ✔ Record frame for each input command @done(21-07-03 16:27)
+    ✔ Save to disk @done(21-07-03 16:27)
+
+
+Multiplayer:
+  ☐ Simple socket io on the express server
+  ☐ Move to simulation to the server
+  ☐ Simple lobby
+
+Controller Input:
+  ☐ Analog sticks
+
+Graphics:
+  ☐ Player art
+  ☐ No man's zone fancy
+  ☐ Background?
+
+Sound Effects:
+  ☐ Shooting
+  ☐ Hit
+  ☐ Exploding
+
+
+
+
+
+
