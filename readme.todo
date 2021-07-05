@@ -53,6 +53,7 @@ AI:
 
 Multiplayer:
   ☐ Simple socket io on the express server
+    ☐ Follow guide on https://socket.io/get-started/chat
   ☐ Move to simulation to the server
   ☐ Simple lobby
 

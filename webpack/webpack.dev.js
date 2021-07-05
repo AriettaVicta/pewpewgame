@@ -5,7 +5,10 @@ const dev = {
   mode: 'development',
   devtool: 'inline-source-map',
   devServer: {
-    open: true
+    //open: true,
+    proxy: {
+      '/socket.io': 'http://localhost:3000',
+    }
   }
 }
 

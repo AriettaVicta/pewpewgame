@@ -8,6 +8,7 @@ import { CharacterInput } from '../interfaces';
 import HealthIndicator from '../objects/healthindicator';
 import Simulation from '../simulation/simulation';
 import EnergyIndicator from '../objects/energyindicator';
+import { io, Socket } from "socket.io-client";
 
 const TargetFrameTime = 16.6666;
 
@@ -63,12 +64,21 @@ export default class MainScene extends Phaser.Scene {
 
   newGameButton : TextButton;
 
+  socket : Socket;
+
   constructor() {
     super({ key: 'MainScene' })
   }
 
   create() {
     var self = this;
+
+    this.socket = io();
+    this.socket.connect();
+    this.socket.on('ack', (param) => {
+      console.log('received ack: ' + param)
+    });
+    this.socket.emit('hello');
 
     this.accumulatedTime = 0;
     this.bullets = [];
@@ -284,6 +294,8 @@ export default class MainScene extends Phaser.Scene {
     } else if (this.keys.SPACE.isUp && this.spaceWasDown) {
       characterInput.Shot = ShotType.Plain;
       this.spaceWasDown = false;
+
+      this.socket.emit('test');
     }
 
     if (this.keys.ONE.isDown) {
