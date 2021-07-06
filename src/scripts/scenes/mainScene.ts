@@ -9,6 +9,7 @@ import HealthIndicator from '../objects/healthindicator';
 import Simulation from '../simulation/simulation';
 import EnergyIndicator from '../objects/energyindicator';
 import { io, Socket } from "socket.io-client";
+import { SuperCoolTest, NewTestDef } from '../../shared/utils';
 
 const TargetFrameTime = 16.6666;
 
@@ -40,7 +41,7 @@ export default class MainScene extends Phaser.Scene {
   instructionText : Phaser.GameObjects.Text;
   instructionText2 : Phaser.GameObjects.Text;
   gameOverText : Phaser.GameObjects.Text;
-  inputState;
+  inputState : InputState;
   keys;
   playArea : Phaser.GameObjects.Rectangle;
   noMansZone : Phaser.GameObjects.Rectangle;
@@ -73,10 +74,13 @@ export default class MainScene extends Phaser.Scene {
   create() {
     var self = this;
 
+    console.log('Code sharing Test: ' + SuperCoolTest);
+
     this.socket = io();
     this.socket.connect();
     this.socket.on('ack', (param) => {
-      console.log('received ack: ' + param)
+      console.log(NewTestDef)
+      console.log('received ack updated: ' + param)
     });
     this.socket.emit('hello');
 

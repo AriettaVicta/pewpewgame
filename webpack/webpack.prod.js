@@ -1,7 +1,9 @@
-const path = require('path')
-const { merge } = require('webpack-merge')
-const common = require('./webpack.common')
-const WebpackObfuscator = require('webpack-obfuscator')
+//const { merge } = require('webpack-merge')
+import mergepkg from 'webpack-merge';
+const {merge} = mergepkg;
+//const common = require('./webpack.common')
+import common from './webpack.common.js';
+//const WebpackObfuscator = require('webpack-obfuscator')
 
 const prod = {
   mode: 'production',
@@ -31,4 +33,5 @@ const prod = {
   ]
 }
 
-module.exports = merge(common, prod)
+//module.exports = merge(common, prod)
+export default merge(common, prod)

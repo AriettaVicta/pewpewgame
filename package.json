@@ -34,6 +34,7 @@
     "url": "https://github.com/yandeu/phaser-project-template",
     "author": "Yannick Deubel (https://github.com/yandeu)"
   },
+  "type": "module",
   "engines": {
     "node": ">=12"
   },
