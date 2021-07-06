@@ -1,5 +1,10 @@
 //const path = require('path')
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 //const CopyWebpackPlugin = require('copy-webpack-plugin')
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 //const HtmlWebpackPlugin = require('html-webpack-plugin')
@@ -10,9 +15,10 @@ const {InjectManifest} = workbox;
 //const webpack = require('webpack')
 import webpack from 'webpack';
 
-var __dirname = import.meta.url;
-__dirname = __dirname.replace("file:///", "");
-__dirname = __dirname.replace("/webpack.common.js", "");
+//var __dirname = import.meta.url;
+//console.log("DIRNAME BEFORE: " + __dirname);
+//__dirname = __dirname.replace("file:///", "");
+//__dirname = __dirname.replace("/webpack.common.js", "");
 console.log('DIRNAME USED: ' + __dirname);
 
 //module.exports = {

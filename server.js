@@ -14,9 +14,14 @@ import MyServer from './src/server/myserver.js';
 
 const myServer = new MyServer(io);
 
-var __dirname = import.meta.url;
-__dirname = __dirname.replace("file:///", "");
-__dirname = __dirname.replace("/server.js", "");
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// var __dirname = import.meta.url;
+// __dirname = __dirname.replace("file:///", "");
+// __dirname = __dirname.replace("/server.js", "");
 console.log("DIRNAME USED: " + __dirname);
 
 const DIST_DIR = path.join(__dirname, '/dist');
