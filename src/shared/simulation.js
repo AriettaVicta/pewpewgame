@@ -1,37 +1,26 @@
-import SimCharacter from "./sim-character";
-import SimBullet from "./sim-bullet";
-import { CharacterInput } from '../interfaces';
-import { ShotType } from "../enums";
+import SimCharacter from "./sim-character.js";
+import SimBullet from "./sim-bullet.js";
+//import { CharacterInput } from '../interfaces';
+import { ShotType } from "./enums.js";
 
 const NoMansZoneWidth = 40;
 
-interface ReplayFrame {
-  tick : number,
-  input2 : CharacterInput,
-}
+// interface ReplayFrame {
+//   tick : number,
+//   input2 : CharacterInput,
+// }
 
 export default class Simulation {
 
-  p1 : SimCharacter;
-  p2 : SimCharacter;
+  p1;// : SimCharacter;
+  p2;// : SimCharacter;
 
-  bullets : SimBullet[];
+  bullets;// : SimBullet[];
 
-  playAreaWidth : number;
-  playAreaHeight : number;
+  playAreaWidth;// : number;
+  playAreaHeight;// : number;
 
-  nextBulletId : number;
-
-  bulletIdsRemoved : number[];
-
-  tick : number;
-
-  replayData : ReplayFrame[];
-  recordingReplay : boolean;
-
-  replayp2Ai : ReplayFrame[] | any;
-  currentReplayFrame : number;
-  nextReplayFrame : number;
+  nextBulletId;// : number;
 
   constructor() {
   }
@@ -40,9 +29,6 @@ export default class Simulation {
 
     var self = this;
 
-    this.replayData = [];
-    this.recordingReplay = false;
-    this.tick = 0;
     this.nextBulletId = 1;
 
     this.playAreaWidth = playAreaWidth;
@@ -72,72 +58,58 @@ export default class Simulation {
 
     this.bullets = [];
 
-    this.replayp2Ai = null;
-    this.currentReplayFrame = 0;
-    this.nextReplayFrame = 0;
-
   }
 
-  submitInput(characterInput : CharacterInput) {
+  submitInput(characterInput) {
     if (characterInput.OwnerId == 1) {
       this.p1.input = characterInput;
     } else if (characterInput.OwnerId == 2) {
       this.p2.input = characterInput;
     }
-
   }
 
-  fireBullet(ownerId : number, x : number, y : number, shotType : ShotType, angle : number) {
+  getWorldState() {
+    return {
+      p1: this.p1,
+      p2: this.p2,
+      bullets: this.bullets,
+    };
+  }
+
+  fireBullet(ownerId, x, y, shotType, angle) {
     let id = this.nextBulletId;
     ++this.nextBulletId;
     let newBullet = new SimBullet(id, ownerId, x, y, shotType, angle);
     this.bullets.push(newBullet);
   }
 
-  update() {
+  beforeRun() {
+  }
 
-    // Replay Stuff
-    if (!this.recordingReplay && this.replayp2Ai) {
-      let restarted = false;
-      let replayFrame = this.replayp2Ai[this.nextReplayFrame];
-      if (replayFrame.tick == this.currentReplayFrame) {
-        this.p2.input = replayFrame.input2;
-        this.nextReplayFrame++;
-
-        if (this.replayp2Ai.length == this.nextReplayFrame) {
-          // Reached the end of the replay data.
-          // Start replaying it again.
-          this.nextReplayFrame = 0;
-          this.currentReplayFrame = 0;
-          restarted = true;
-        }
-      }
-
-      if (!restarted) {
-        this.currentReplayFrame++;
-      }
-    }
-
-    if (this.hasNewInput()) {
-      let newReplayFrame : ReplayFrame = {
-        tick: this.tick,
-        input2: this.p2.input,
-      };
-      this.replayData.push(newReplayFrame);
-    }
-
+  update(elapsedTime, delta) {
     // Handle Input
-    this.p1.executeInput();
-    this.p2.executeInput();
+    this.p1.executeInput(delta);
+    this.p2.executeInput(delta);
 
     // Update all bullets
     // Collision detection etc
-    this.updateBullets();
+    this.updateBullets(elapsedTime, delta);
 
     // Regen energy
-    this.updateEnergy();
+    this.updateEnergy(delta);
+  }
 
-    this.tick++;
+  deleteRemovedBullets() {
+    for (var i = this.bullets.length - 1; i >= 0 ; --i) {
+      let bullet = this.bullets[i];
+      if (bullet.deadAtTime != null) {
+        this.bullets.splice(i, 1);
+      }
+    }
+  }
+
+  isGameOver() {
+    return this.p1.dead || this.p2.dead;
   }
 
   hasNewInput() {
@@ -152,19 +124,23 @@ export default class Simulation {
     );
   }
 
-  updateEnergy() {
-    this.p1.regenEnergy();
-    this.p2.regenEnergy();
+  updateEnergy(delta) {
+    this.p1.regenEnergy(delta);
+    this.p2.regenEnergy(delta);
   }
 
-  updateBullets() {
-    this.bulletIdsRemoved = [];
+  updateBullets(elapsedTime, delta) {
     for (var i = this.bullets.length - 1; i >= 0 ; --i) {
       let bullet = this.bullets[i];
-      bullet.update();
+      bullet.update(delta);
+
+      // Skip if bullet is already removed.
+      if (bullet.deadAtTime != null) {
+        continue;
+      }
 
       // Check for collisions between players
-      let checkCollisionWithPlayer : any = null;
+      let checkCollisionWithPlayer = null;
       if (bullet.owner == this.p1.id) {
         checkCollisionWithPlayer = this.p2;
       } else if (bullet.owner == this.p2.id) {
@@ -177,8 +153,7 @@ export default class Simulation {
           checkCollisionWithPlayer.takeDamage(bullet.shotType);
 
           // Delete the bullet.
-          this.bulletIdsRemoved.push(bullet.id);
-          this.bullets.splice(i, 1);
+          bullet.setAsRemoved(elapsedTime);
           continue;
         }
       }
@@ -190,8 +165,7 @@ export default class Simulation {
       let rightBound = 0 + this.playAreaWidth;
       if (this.isCircleOutOfBounds(bullet, leftBound, rightBound, topBound, bottomBound)) {
         // Delete the bullet.
-        this.bulletIdsRemoved.push(bullet.id);
-        this.bullets.splice(i, 1);
+        bullet.setAsRemoved(elapsedTime);
       }
     }
   }
@@ -209,34 +183,6 @@ export default class Simulation {
     );
 
   }
-
-  toggleRecording() {
-    if (this.recordingReplay) {
-      // Stop and write to disk
-      let json = JSON.stringify(this.replayData);
-
-      localStorage.setItem("ai1", json);
-
-      this.recordingReplay = false;
-    } else {
-      // Start
-      this.recordingReplay = true;
-      this.replayData = [];
-      this.tick = 0;
-    }
-  }
-
-  enableReplay() {
-    // AI replay
-    let json = localStorage.getItem("ai1");
-    if (json) {
-      this.replayp2Ai = JSON.parse(json);
-      this.currentReplayFrame = 0;
-      this.nextReplayFrame = 0;
-    }
-  }
-
-
 }
 
 function doCirclesOverlap(c1, c2) {

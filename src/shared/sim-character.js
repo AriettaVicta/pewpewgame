@@ -1,26 +1,26 @@
-import Constants from '../contants';
-import { ShotType } from '../enums';
-import { CharacterInput } from '../interfaces';
-import ShotDefinitions from '../shotdefs';
+import Constants from './constants.js';
+import { ShotType } from './enums.js';
+//import { CharacterInput } from '../interfaces.js';
+import ShotDefinitions from './shotdefs.js';
 
 const CharacterRadius = 10;
-const CharacterSpeed = 5;
+const CharacterSpeedPerMs = 0.2;
 
 export default class SimCharacter {
 
-  x : number;
-  y : number;
-  radius: number;
+  x;
+  y;
+  radius;
 
-  leftBound : number;
-  rightBound : number;
-  facingDirection : number;
+  leftBound;
+  rightBound;
+  facingDirection;
   fireBullet;
-  id : number;
-  health : number;
-  energy : number;
-  dead : boolean;
-  input : CharacterInput;
+  id;
+  health;
+  energy;
+  dead;
+  input;
 
   constructor(id, x, y, facingDirection, leftBound, rightBound, fireBullet) {
 
@@ -36,19 +36,24 @@ export default class SimCharacter {
     this.health = Constants.CharacterMaxHealth;
     this.energy = Constants.CharacterStartingEnergy;
     this.dead = false;
+
+    this.input = null;
   }
 
-  executeInput() {
-    this.move(this.input);
-    this.shoot(this.input);
-  }
-
-  move(input : CharacterInput) {
-    if (input.HorizontalMovement != 0) {
-      this.x += input.HorizontalMovement * CharacterSpeed;
+  executeInput(delta) {
+    if (this.input) {
+      this.move(delta);
+      this.shoot();
+      this.input.Shot = ShotType.None;
     }
-    if (input.VerticalMovement != 0) {
-      this.y += input.VerticalMovement * CharacterSpeed;
+  }
+
+  move(delta) {
+    if (this.input.HorizontalMovement != 0) {
+      this.x += this.input.HorizontalMovement * CharacterSpeedPerMs * delta;
+    }
+    if (this.input.VerticalMovement != 0) {
+      this.y += this.input.VerticalMovement * CharacterSpeedPerMs * delta;
     }
 
     // Respect boundaries
@@ -62,7 +67,8 @@ export default class SimCharacter {
     if (this.y + this.radius> bottomBound) this.y = bottomBound - this.radius;
   }
 
-  shoot(input : CharacterInput) {
+  shoot() {
+    let input = this.input;
     if (input.Shot != ShotType.None) {
 
       let energyNeeded = ShotDefinitions[input.Shot].EnergyReq;
@@ -75,9 +81,10 @@ export default class SimCharacter {
         let angle = (this.facingDirection == 1) ? 0 : Math.PI;
         if (input.Shot == ShotType.BigSlow) {
           // Adjust the angle based on the VerticalMovement of the character.
-          if (input.VerticalMovement > 0) {
+          let addAngle = input.VerticalMovement * this.facingDirection;
+          if (addAngle > 0) {
             angle += (10 * Math.PI / 180);
-          } else if (input.VerticalMovement < 0) {
+          } else if (addAngle < 0) {
             angle -= (10 * Math.PI / 180);
           }
         }
@@ -91,7 +98,7 @@ export default class SimCharacter {
     }
   }
 
-  takeDamage(shotType : ShotType) {
+  takeDamage(shotType) {
     this.health -= ShotDefinitions[shotType].Damage;
     if (this.health <= 0) {
       this.health = 0;
@@ -99,8 +106,8 @@ export default class SimCharacter {
     }
   }
 
-  regenEnergy() {
-    this.energy += Constants.CharacterRegenEnergyAmount;
+  regenEnergy(delta) {
+    this.energy += Constants.CharacterRegenEnergyAmountPerMs * delta;
     this.energy = Math.round((this.energy + Number.EPSILON)* 100) / 100;
     if (this.energy > Constants.CharacterMaxEnergy) {
       this.energy = Constants.CharacterMaxEnergy;

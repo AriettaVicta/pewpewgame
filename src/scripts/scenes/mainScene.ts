@@ -1,24 +1,16 @@
 import FpsText from '../objects/fpsText'
 import TextButton from '../objects/textbutton';
-import Constants from '../contants';
-import Bullet from '../objects/bullet';
-import {ShotType} from '../enums';
-import Character from '../objects/character';
+import Constants from '../../shared/constants';
+import BulletGraphic from '../objects/bulletgraphic';
+import {ShotType} from '../../shared/enums';
+import CharacterGraphic from '../objects/charactergraphic';
 import { CharacterInput } from '../interfaces';
 import HealthIndicator from '../objects/healthindicator';
-import Simulation from '../simulation/simulation';
 import EnergyIndicator from '../objects/energyindicator';
 import { io, Socket } from "socket.io-client";
-import { SuperCoolTest, NewTestDef } from '../../shared/utils';
+import SimBullet from '../../shared/sim-bullet';
 
 const TargetFrameTime = 16.6666;
-
-const PlayerStartX = Constants.PlayAreaBufferX + Constants.PlayAreaWidth / 4;
-const PlayerStartY = Constants.PlayAreaBufferY + Constants.PlayAreaHeight / 2;
-
-const EnemyStartX = Constants.PlayAreaBufferX + Constants.PlayAreaWidth / 4 + Constants.PlayAreaWidth/2;
-const EnemyStartY = Constants.PlayAreaBufferY + Constants.PlayAreaHeight / 2;
-
 
 const PlayerColor = 0x1fe5ff;
 const EnemyColor = 0xff0090;
@@ -30,7 +22,8 @@ const NoMansZoneColor = 0xFF0000;
 const Depth_UI = 1000;
 
 enum InputState {
-  Default,
+  WaitingToJoinGame,
+  Playing,
   GameOver,
 }
 
@@ -41,14 +34,15 @@ export default class MainScene extends Phaser.Scene {
   instructionText : Phaser.GameObjects.Text;
   instructionText2 : Phaser.GameObjects.Text;
   gameOverText : Phaser.GameObjects.Text;
+  onlineInfoText : Phaser.GameObjects.Text;
   inputState : InputState;
   keys;
   playArea : Phaser.GameObjects.Rectangle;
   noMansZone : Phaser.GameObjects.Rectangle;
   accumulatedTime : number;
 
-  player : Character;
-  enemy : Character;
+  playerGraphic : CharacterGraphic;
+  enemyGraphic : CharacterGraphic;
   playerHealthIndicator : HealthIndicator;
   enemyHealthIndicator : HealthIndicator;
   playerEnergyIndicator : EnergyIndicator;
@@ -59,13 +53,24 @@ export default class MainScene extends Phaser.Scene {
   mWasDown : boolean;
   nWasDown : boolean;
   oneWasDown: boolean;
-  bullets : Bullet[];
-
-  simulation : Simulation;
+  bulletGraphics : BulletGraphic[];
 
   newGameButton : TextButton;
+  joinGameButton : TextButton;
+
+  sentMessage;
+  pingstart;
 
   socket : Socket;
+
+  side : number;
+
+  lastInput : CharacterInput | any;
+
+  previousWorldState;
+  previousWorldStateTimestamp : number;
+  latestWorldState;
+  latestWorldStateTimestamp : number;
 
   constructor() {
     super({ key: 'MainScene' })
@@ -74,20 +79,48 @@ export default class MainScene extends Phaser.Scene {
   create() {
     var self = this;
 
-    console.log('Code sharing Test: ' + SuperCoolTest);
+    this.onlineInfoText = this.add.text(Constants.PlayAreaBufferX+Constants.PlayAreaWidth + 5, 100,
+      'Disconnected', { 
+      color: 'white',
+      fontSize: '24px',
+      wordWrap: { width: 200, useAdvancedWrap: true }
+    }).setOrigin(0, 0);
 
     this.socket = io();
     this.socket.connect();
-    this.socket.on('ack', (param) => {
-      console.log(NewTestDef)
-      console.log('received ack updated: ' + param)
+    this.socket.on("joingameresponse", (success) => {
+      var time = Date.now() - self.sentMessage;
+      console.log('response in: ' + time);
+      if (success) {
+        self.onlineInfoText.setText('Joined game successfully');
+      } else {
+        self.onlineInfoText.setText('Failed to join game');
+      }
     });
-    this.socket.emit('hello');
+    this.socket.on('startgame', (message) => {
+      self.onlineInfoText.setText('Game started! Side: ' + message.side);
+      self.beginOnlineGame(message);
+    });
+    this.socket.on('worldupdate', (worldState) => {
+      self.processWorldUpdate(worldState);
+    })
+
+    this.socket.on('pong', () => {
+      const latency = Date.now() - self.pingstart;
+      console.log('latency is: ' + latency);
+    });
+
+    setInterval(() => {
+      self.pingstart = Date.now();
+    
+      console.log('emit ping');
+      // volatile, so the packet will be discarded if the socket is not connected
+      self.socket.volatile.emit("ping");
+    }, 2000); 
+
 
     this.accumulatedTime = 0;
-    this.bullets = [];
-
-    this.simulation = new Simulation();
+    this.bulletGraphics = [];
 
     var config = {
       key: 'explodeAnimation',
@@ -96,7 +129,7 @@ export default class MainScene extends Phaser.Scene {
       hideOnComplete: true,
     };
 
-    this.inputState = InputState.Default;
+    this.inputState = InputState.WaitingToJoinGame;
 
     this.fpsText = new FpsText(this)
 
@@ -120,8 +153,12 @@ export default class MainScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     this.gameOverText.setDepth(Depth_UI);
 
-    this.newGameButton = new TextButton(this, textX +350, textY-80, 'New Game', () => {
-      self.beginNewGame();
+    // this.newGameButton = new TextButton(this, textX +350, textY-80, 'New Game', () => {
+    //   self.beginNewGame(1);
+    // });
+    this.joinGameButton = new TextButton(this, textX +150, textY-80, 'Join Game', () => {
+      self.sentMessage = Date.now();
+      self.socket.emit('joingame');
     });
 
     this.playArea = this.add.rectangle(Constants.PlayAreaBufferX, Constants.PlayAreaBufferY, 
@@ -148,37 +185,47 @@ export default class MainScene extends Phaser.Scene {
     this.playerEnergyIndicator = new EnergyIndicator(this, Constants.PlayAreaBufferX + 250, textY-30);
     this.enemyEnergyIndicator = new EnergyIndicator(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth - 450, textY-30);
 
-    this.beginNewGame();
+    //this.beginNewGame(1);
   }
   
-  beginNewGame() {
-    this.inputState = InputState.Default;
+  beginOnlineGame(startGameMessage) {
+    this.joinGameButton.setEnabled(false);
+    this.beginNewGame(startGameMessage);
+  }
+
+  beginNewGame(startGameMessage) {
+    this.inputState = InputState.Playing;
+
+    this.side = startGameMessage.side;
+    this.previousWorldState = startGameMessage.worldState;
+    this.previousWorldStateTimestamp = Date.now();
+    this.latestWorldState = this.previousWorldState;
+    this.latestWorldStateTimestamp = this.previousWorldStateTimestamp;
+    this.lastInput = null;
 
     // Cleanup previous state
-    if (this.player) {
-      this.player.destroy();
+    if (this.playerGraphic) {
+      this.playerGraphic.destroy();
     }
-    if (this.enemy) {
-      this.enemy.destroy();
+    if (this.enemyGraphic) {
+      this.enemyGraphic.destroy();
     }
-    for (var i = 0 ; i < this.bullets.length; i++) {
-      this.bullets[i].destroy();
+    for (var i = 0 ; i < this.bulletGraphics.length; i++) {
+      this.bulletGraphics[i].destroy();
     }
-    this.bullets = [];
+    this.bulletGraphics = [];
 
     this.spaceWasDown = false;
     this.pWasDown = false;
 
     this.gameOverText.setText('');
 
-    this.simulation.initialize(Constants.PlayAreaWidth, Constants.PlayAreaHeight);
-
     // Create player
-    this.player = new Character(this, 1, PlayerColor, 1,
+    this.playerGraphic = new CharacterGraphic(this, 1, PlayerColor, 1,
     );
     
     // Create enemy
-    this.enemy = new Character(this, 2, EnemyColor, -1,
+    this.enemyGraphic = new CharacterGraphic(this, 2, EnemyColor, -1,
     );
 
     this.updateIndicators();
@@ -196,19 +243,13 @@ export default class MainScene extends Phaser.Scene {
       this.fpsText.update()
       this.accumulatedTime -= TargetFrameTime;
 
-      if (this.inputState == InputState.Default) {
+      if (this.inputState == InputState.Playing) {
         this.handlePlayerInput();
-        this.handleEnemyInput();
-        this.debugInput();
-
-        // Send input to the simulation
-        // Then update it.
-        this.simulation.update();
 
         // Update the health indicators
         this.updateIndicators();
-        this.playerHealthIndicator.update(this.simulation.p1.health);
-        this.enemyHealthIndicator.update(this.simulation.p2.health);
+        this.playerHealthIndicator.update(this.previousWorldState.p1.health);
+        this.enemyHealthIndicator.update(this.previousWorldState.p2.health);
 
         // Update the character positions and bullets
         this.updateCharacterPositionsFromSimulation();
@@ -221,61 +262,147 @@ export default class MainScene extends Phaser.Scene {
   }
 
   updateIndicators() {
-    this.playerHealthIndicator.update(this.simulation.p1.health);
-    this.enemyHealthIndicator.update(this.simulation.p2.health);
+    this.playerHealthIndicator.update(this.previousWorldState.p1.health);
+    this.enemyHealthIndicator.update(this.previousWorldState.p2.health);
 
-    this.playerEnergyIndicator.update(this.simulation.p1.energy);
-    this.enemyEnergyIndicator.update(this.simulation.p2.energy);
+    this.playerEnergyIndicator.update(this.previousWorldState.p1.energy);
+    this.enemyEnergyIndicator.update(this.previousWorldState.p2.energy);
   }
 
   updateCharacterPositionsFromSimulation() {
-    this.player.x = this.simulation.p1.x + Constants.PlayAreaBufferX;
-    this.player.y = this.simulation.p1.y + Constants.PlayAreaBufferY;
 
-    this.enemy.x = this.simulation.p2.x + Constants.PlayAreaBufferX;
-    this.enemy.y = this.simulation.p2.y + Constants.PlayAreaBufferY;
+    this.interpolateCharacterPosition(this.previousWorldState.p1, this.latestWorldState.p1, this.playerGraphic);
+    this.interpolateCharacterPosition(this.previousWorldState.p2, this.latestWorldState.p2, this.enemyGraphic);
+
+  }
+
+  interpolateCharacterPosition(prevP1, latestP1, graphic) {
+    let x1 = prevP1.x;
+    let x2 = latestP1.x;
+    let y1 = prevP1.y;
+    let y2 = latestP1.y;
+
+    let elapsedTimeSincePrevious = Date.now() - this.previousWorldStateTimestamp;
+    let percent = elapsedTimeSincePrevious / Constants.ServerUpdateMs;
+    if (percent > 1) percent = 1;
+
+    let x = ((x2 - x1) * percent) + x1;
+    let y = ((y2 - y1) * percent) + y1;
+
+    graphic.x = x + Constants.PlayAreaBufferX;
+    graphic.y = y + Constants.PlayAreaBufferY;
+  }
+
+  getLatestStateForBullet(prevSimBullet : SimBullet) {
+    for (var i = 0; i < this.latestWorldState.bullets.length; ++i) {
+      let latestBullet = this.latestWorldState.bullets[i];
+      if (prevSimBullet.id == latestBullet.id) {
+        return latestBullet;
+      }
+    }
+
+    return null;
   }
 
   updateBulletPositionsFromSimulation() {
-    for (var i = 0; i < this.simulation.bullets.length; ++i) {
+
+    let elapsedTimeSincePrevious = Date.now() - this.previousWorldStateTimestamp;
+
+    for (var i = 0; i < this.previousWorldState.bullets.length; ++i) {
       // Find the corresponding graphical bullet and update it
       // If we didn't find it, create a new one.
-      let simBullet = this.simulation.bullets[i];
-      let found = false;
-      for (var j = 0; j < this.bullets.length; ++j) {
-        let graphicalBullet = this.bullets[j];
+      let prevSimBullet = this.previousWorldState.bullets[i];
+      let latestSimBullet = this.getLatestStateForBullet(prevSimBullet);
+
+      if (latestSimBullet == null) {
+        // Bullet disappears in next update.
+        // Handled in the other loop below.
+      } else {
+        let found = false;
+
+        let denominator = Constants.ServerUpdateMs;
+        let dead = (latestSimBullet.deadAtTime != null);
+        if (dead) {
+          denominator = latestSimBullet.deadAtTime;
+        }
+
+        let percent = elapsedTimeSincePrevious / denominator;
+        if (percent > 1 && dead) {
+          // Delete bullet here.
+          for (var j = 0; j < this.bulletGraphics.length; ++j) {
+            let graphicalBullet = this.bulletGraphics[j];
+            if (prevSimBullet.id == graphicalBullet.id) {
+              graphicalBullet.destroy();
+              this.bulletGraphics.splice(j, 1);
+              break;
+            }
+          }
+        } else {
+          if (percent > 1) percent = 1;
+          for (var j = 0; j < this.bulletGraphics.length; ++j) {
+            let graphicalBullet = this.bulletGraphics[j];
+            if (prevSimBullet.id == graphicalBullet.id) {
+              // Update existing bullet
+              found = true;
+              graphicalBullet.interpolatePosition(prevSimBullet, latestSimBullet, percent);
+              break;
+            }
+          }
+
+          if (!found) {
+            // Create new bullet
+            let newGraphicalBullet = new BulletGraphic(this, prevSimBullet);
+            newGraphicalBullet.interpolatePosition(prevSimBullet, latestSimBullet, percent);
+            this.bulletGraphics.push(newGraphicalBullet);
+          }
+        }
+      }
+    }
+
+    //
+    // Go through all the graphicsbullets.
+    // If you don't find a matching bullet in the world state
+    // then it has been removed. Delete it!
+    //
+    for (var j = this.bulletGraphics.length - 1; j >= 0; --j) {
+      let graphicalBullet = this.bulletGraphics[j];
+      let foundBullet = false;
+      for (var i = 0; i < this.latestWorldState.bullets.length; ++i) {
+        let simBullet = this.latestWorldState.bullets[i];
         if (simBullet.id == graphicalBullet.id) {
-          // Update existing bullet
-          found = true;
-          graphicalBullet.updatePositionFromSimBullet(simBullet);
+          foundBullet = true;
           break;
         }
       }
 
-      if (!found) {
-        // Create new bullet
-        let newGraphicalBullet = new Bullet(this, simBullet);
-        this.bullets.push(newGraphicalBullet);
-      }
-    }
-
-    for (var i = 0; i < this.simulation.bulletIdsRemoved.length; ++i) {
-      // Find the corresponding graphical bullet and delete it.
-      let removedId = this.simulation.bulletIdsRemoved[i];
-      for (var j = this.bullets.length - 1; j >= 0; --j) {
-        let graphicalBullet = this.bullets[j];
-        if (graphicalBullet.id == removedId) {
-          graphicalBullet.destroy();
-          this.bullets.splice(j, 1);
-        }
+      if (!foundBullet) {
+        graphicalBullet.destroy();
+        this.bulletGraphics.splice(j, 1);
       }
     }
   }
 
+  processWorldUpdate(worldState) {
+
+    this.lastInput = null;
+
+    this.previousWorldState = this.latestWorldState;
+    this.previousWorldStateTimestamp = this.latestWorldStateTimestamp;
+
+    this.latestWorldState = worldState;
+    this.latestWorldStateTimestamp = Date.now();
+
+  }
+
   handlePlayerInput() {
 
+    let timeSinceUpdate = Date.now() - this.latestWorldStateTimestamp;
+    if (timeSinceUpdate < 0) timeSinceUpdate = 0;
+
     let characterInput : CharacterInput = {
-      OwnerId: 1,
+      OwnerId: this.side,
+      TimeSinceServerUpdate: timeSinceUpdate,
+
       VerticalMovement: 0,
       HorizontalMovement: 0,
       Shot: ShotType.None,
@@ -298,8 +425,6 @@ export default class MainScene extends Phaser.Scene {
     } else if (this.keys.SPACE.isUp && this.spaceWasDown) {
       characterInput.Shot = ShotType.Plain;
       this.spaceWasDown = false;
-
-      this.socket.emit('test');
     }
 
     if (this.keys.ONE.isDown) {
@@ -309,66 +434,49 @@ export default class MainScene extends Phaser.Scene {
       this.oneWasDown = false;
     }
 
-    this.simulation.submitInput(characterInput);
-  }
-
-  handleEnemyInput() {
-    let characterInput : CharacterInput = {
-      OwnerId: 2,
-      VerticalMovement: 0,
-      HorizontalMovement: 0,
-      Shot: ShotType.None,
-    };
-
-    if (this.keys.I.isDown) {
-      characterInput.VerticalMovement = -1;
-    } else if (this.keys.K.isDown){
-      characterInput.VerticalMovement = 1;
-    }
-    
-    if (this.keys.J.isDown){
-      characterInput.HorizontalMovement = -1;
-    } else if (this.keys.L.isDown){
-      characterInput.HorizontalMovement = 1;
-    }
-    
-    if (this.keys.P.isDown) {
-      this.pWasDown = true;
-    }
-    else if (this.keys.P.isUp && this.pWasDown) {
-      characterInput.Shot = ShotType.Plain;
-      this.pWasDown = false;
+    let inputHasChanged = true;
+    if (this.lastInput) {
+      if (characterInput.HorizontalMovement == this.lastInput.HorizontalMovement &&
+        characterInput.VerticalMovement == this.lastInput.VerticalMovement &&
+        characterInput.Shot == this.lastInput.Shot
+        ) {
+        inputHasChanged = false;
+      }
     }
 
-    this.simulation.submitInput(characterInput);
+    this.lastInput = characterInput;
+
+    if (inputHasChanged) {
+      this.socket.emit('sendinput', characterInput);
+    }
   }
 
   debugInput() {
-    if (this.keys.M.isDown) {
-      this.mWasDown = true;
-    } else if (this.keys.M.isUp && this.mWasDown) {
+    // if (this.keys.M.isDown) {
+    //   this.mWasDown = true;
+    // } else if (this.keys.M.isUp && this.mWasDown) {
 
-      // Start or stop recording.
-      this.simulation.toggleRecording();
+    //   // Start or stop recording.
+    //   this.simulation.toggleRecording();
 
-      this.mWasDown = false;
-    }
+    //   this.mWasDown = false;
+    // }
 
-    if (this.keys.N.isDown) {
-      this.nWasDown = true;
-    } else if (this.keys.N.isUp && this.nWasDown) {
-      this.simulation.enableReplay();
-      this.nWasDown = false;
-    }
+    // if (this.keys.N.isDown) {
+    //   this.nWasDown = true;
+    // } else if (this.keys.N.isUp && this.nWasDown) {
+    //   this.simulation.enableReplay();
+    //   this.nWasDown = false;
+    // }
   }
 
   checkGameoverState() {
-    if (this.simulation.p1.dead || this.simulation.p2.dead) {
+    if (this.latestWorldState.p1.dead || this.latestWorldState.p2.dead) {
 
-      if (this.simulation.p1.dead && this.simulation.p2.dead) {
+      if (this.latestWorldState.p1.dead && this.latestWorldState.p2.dead) {
         // Draw
         this.gameOverText.setText('Draw');
-      } else if (this.simulation.p1.dead) {
+      } else if (this.latestWorldState.p1.dead) {
         // Enemy wins
         this.gameOverText.setText('Enemy wins');
       } else {

@@ -22,7 +22,6 @@ const __dirname = path.dirname(__filename);
 // var __dirname = import.meta.url;
 // __dirname = __dirname.replace("file:///", "");
 // __dirname = __dirname.replace("/server.js", "");
-console.log("DIRNAME USED: " + __dirname);
 
 const DIST_DIR = path.join(__dirname, '/dist');
 const HTML_FILE = path.join(DIST_DIR, 'index.html');

@@ -1,5 +1,3 @@
-import Constants from '../contants';
-
 const TextBuffer = 5;
 const StrokeWidth = 3;
 

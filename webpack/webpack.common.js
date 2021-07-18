@@ -19,7 +19,6 @@ import webpack from 'webpack';
 //console.log("DIRNAME BEFORE: " + __dirname);
 //__dirname = __dirname.replace("file:///", "");
 //__dirname = __dirname.replace("/webpack.common.js", "");
-console.log('DIRNAME USED: ' + __dirname);
 
 //module.exports = {
 const config = {

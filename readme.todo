@@ -14,49 +14,34 @@ Types of shots/abilities
 Health bar
 Magic power bar - regenerates, used to shoot
 
-Setup:
-  ✔ Rectangular arena - mark halfway @done(21-06-26 16:25)
-  ✔ Ship that can move around your side @done(21-06-26 16:25)
 
-Basic shooting:
-  ✔ Shoot fast shots that disappear when hitting wall/enemy @done(21-06-26 17:52)
-
-Health bar:
-  ✔ Start with 100 hp @done(21-06-26 18:13)
-  ✔ Decreases when you take damage @done(21-06-26 18:13)
-
-Simulation Setup:
-  ✔ Separate Simulation class @done(21-07-03 15:30)
-  ✔ Pass input to it @done(21-07-03 15:30)
-  ✔ Update it each frame @done(21-07-03 15:30)
-  ✔ After update, update character/bullet positions @done(21-07-03 15:30)
-
-KeyHandler:
-  ☐ Move to using key up handler
-
-Magic Bar:
-  ✔ Start at 10? @done(21-07-03 16:52)
-  ✔ Decreases when you shoot @done(21-07-03 16:52)
-  ✔ Regenerates automatically @done(21-07-03 16:52)
-
-Slow Moving Bullet:
-  ✔ New bullet type @done(21-07-03 17:14)
-  ✔ New Graphic @done(21-07-03 17:14)
-  ✔ Speed/energy cost @done(21-07-03 17:14)
-  ✔ Adjust to movement @done(21-07-03 17:14)
-
-AI:
-  ✔ Record player movement/attacks and play it back to generate enemy behavior @done(21-07-03 16:27)
-    ✔ Record frame for each input command @done(21-07-03 16:27)
-    ✔ Save to disk @done(21-07-03 16:27)
-
+Following guide from https://www.gabrielgambetta.com/lag-compensation.html
 
 Multiplayer:
-  ☐ Simple socket io on the express server
-    ☐ Follow guide on https://socket.io/get-started/chat
-  ☐ Move to simulation to the server
-  ☐ Simple lobby
+  ☐ Change to model where server gets input, runs sim, sends updates back
+    Server:
+      ✔ Server gets input with timestamps @done(21-07-17 16:39)
+      ✔ Server processes inputs and updates world status @done(21-07-17 16:39)
+      ✔ Server sends regular world snapshots to all clients @done(21-07-17 16:39)
+    Client:
+      ✔ Client sends inputs and gets world updates @done(21-07-17 16:39)
+        ✔ Input includes timestamp since last server update @done(21-07-17 16:40)
+      ☐ Client simulates effects locally
+      ☐ Interpolates known past states for other entities
+      ☐ Buffer client input - instead of sending when input changes, send how long you had a button down
 
+
+
+
+Bugs/Check Later:
+  ☐ Handle edge case where the bullet is created and destroyed in same server update?
+
+
+
+
+KeyHandler:
+    ☐ Move to using key up handler
+  
 Controller Input:
   ☐ Analog sticks
 
@@ -69,6 +54,10 @@ Sound Effects:
   ☐ Shooting
   ☐ Hit
   ☐ Exploding
+
+Cool ideas:
+  ☐ Slow down effect when more stuff is on screen
+  ☐ Ability to slow down bullets on your side of the screen
 
 
 

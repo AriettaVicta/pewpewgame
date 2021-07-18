@@ -1,11 +1,6 @@
-import Constants from '../contants';
-import { ShotType } from '../enums';
-import { CharacterInput } from '../interfaces';
-
 const CharacterRadius = 10;
-const CharacterSpeed = 5;
 
-export default class Character extends Phaser.GameObjects.Arc {
+export default class CharacterGraphic extends Phaser.GameObjects.Arc {
 
   facingDirection : number;
   fireBullet;

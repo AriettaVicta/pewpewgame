@@ -1,20 +1,20 @@
-import { ShotType } from "./enums";
+import { ShotType } from "./enums.js";
 
-interface ShotDefinition {
-  Type : ShotType,
-  Speed : number,
-  Radius : number,
-  Damage : number,
-  EnergyReq : number,
-  Color : number,
-}
+// interface ShotDefinition {
+//   Type : ShotType,
+//   Speed : number,
+//   Radius : number,
+//   Damage : number,
+//   EnergyReq : number,
+//   Color : number,
+// }
 
-var ShotDefinitions : ShotDefinition[];
+var ShotDefinitions;// : ShotDefinition[];
 
 ShotDefinitions = [];
 ShotDefinitions[ShotType.Plain] = {
   Type: ShotType.Plain,
-  Speed: 20,
+  Speed: 0.4,
   Radius: 5,
   Damage: 10,
   EnergyReq: 5,
@@ -22,7 +22,7 @@ ShotDefinitions[ShotType.Plain] = {
 }
 ShotDefinitions[ShotType.BigSlow] = {
   Type: ShotType.BigSlow,
-  Speed: 3,
+  Speed: 0.1,
   Radius: 15,
   Damage: 10,
   EnergyReq: 10,

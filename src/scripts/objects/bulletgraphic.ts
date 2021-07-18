@@ -1,14 +1,13 @@
-import {ShotType} from '../enums';
-import Constants from '../contants';
-import SimBullet from '../simulation/sim-bullet';
-import ShotDefinitions from '../shotdefs';
+import Constants from '../../shared/constants';
+import SimBullet from '../../shared/sim-bullet';
+import ShotDefinitions from '../../shared/shotdefs';
 
-export default class Bullet extends Phaser.GameObjects.Arc {
+export default class BulletGraphic extends Phaser.GameObjects.Arc {
 
   id : number;
   angle : number;
   owner : number;
-  shotType : ShotType;
+  shotType : number;
 
   constructor(scene, simBullet : SimBullet) {
     let radius = ShotDefinitions[simBullet.shotType].Radius;
@@ -22,13 +21,14 @@ export default class Bullet extends Phaser.GameObjects.Arc {
     this.angle = simBullet.angle;
     this.shotType = simBullet.shotType;
 
-    this.updatePositionFromSimBullet(simBullet);
-
     scene.add.existing(this)
   }
 
-  updatePositionFromSimBullet(simBullet) {
-    this.x = simBullet.x + Constants.PlayAreaBufferX;
-    this.y = simBullet.y + Constants.PlayAreaBufferY;
+  interpolatePosition(prev : SimBullet, next : SimBullet, percent : number) {
+    let x = ((next.x - prev.x) * percent) + prev.x;
+    let y = ((next.y - prev.y) * percent) + prev.y;
+
+    this.x = x + Constants.PlayAreaBufferX;
+    this.y = y + Constants.PlayAreaBufferY;
   }
 }
