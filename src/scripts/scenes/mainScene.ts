@@ -35,6 +35,7 @@ export default class MainScene extends Phaser.Scene {
   instructionText2 : Phaser.GameObjects.Text;
   gameOverText : Phaser.GameObjects.Text;
   onlineInfoText : Phaser.GameObjects.Text;
+  latencyText : Phaser.GameObjects.Text;
   inputState : InputState;
   keys;
   playArea : Phaser.GameObjects.Rectangle;
@@ -86,6 +87,12 @@ export default class MainScene extends Phaser.Scene {
       wordWrap: { width: 200, useAdvancedWrap: true }
     }).setOrigin(0, 0);
 
+    this.latencyText = this.add.text(Constants.PlayAreaWidth + 5, 20,
+      'Latency: 0', { 
+      color: 'white',
+      fontSize: '24px',
+    }).setOrigin(0, 0);
+
     this.socket = io();
     this.socket.connect();
     this.socket.on("joingameresponse", (success) => {
@@ -107,13 +114,11 @@ export default class MainScene extends Phaser.Scene {
 
     this.socket.on('pong', () => {
       const latency = Date.now() - self.pingstart;
-      console.log('latency is: ' + latency);
+      self.latencyText.setText('Latency: ' + latency);
     });
 
     setInterval(() => {
       self.pingstart = Date.now();
-    
-      console.log('emit ping');
       // volatile, so the packet will be discarded if the socket is not connected
       self.socket.volatile.emit("ping");
     }, 2000); 
@@ -276,15 +281,24 @@ export default class MainScene extends Phaser.Scene {
 
   }
 
+  getElapsedTimeSincePreviousUpdate() {
+    return (Date.now() - this.previousWorldStateTimestamp) - Constants.ServerUpdateMs;
+  }
+
+  getPercentElapsedTime() {
+    let percent = this.getElapsedTimeSincePreviousUpdate() / Constants.ServerUpdateMs;
+    if (percent > 1) percent = 1;
+
+    return percent;
+  }
+
   interpolateCharacterPosition(prevP1, latestP1, graphic) {
     let x1 = prevP1.x;
     let x2 = latestP1.x;
     let y1 = prevP1.y;
     let y2 = latestP1.y;
 
-    let elapsedTimeSincePrevious = Date.now() - this.previousWorldStateTimestamp;
-    let percent = elapsedTimeSincePrevious / Constants.ServerUpdateMs;
-    if (percent > 1) percent = 1;
+    let percent = this.getPercentElapsedTime();
 
     let x = ((x2 - x1) * percent) + x1;
     let y = ((y2 - y1) * percent) + y1;
@@ -306,7 +320,7 @@ export default class MainScene extends Phaser.Scene {
 
   updateBulletPositionsFromSimulation() {
 
-    let elapsedTimeSincePrevious = Date.now() - this.previousWorldStateTimestamp;
+    let elapsedTimeSincePrevious = this.getElapsedTimeSincePreviousUpdate();
 
     for (var i = 0; i < this.previousWorldState.bullets.length; ++i) {
       // Find the corresponding graphical bullet and update it

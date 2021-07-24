@@ -17,19 +17,26 @@ Magic power bar - regenerates, used to shoot
 
 Following guide from https://www.gabrielgambetta.com/lag-compensation.html
 
-Multiplayer:
-  ☐ Change to model where server gets input, runs sim, sends updates back
-    Server:
-      ✔ Server gets input with timestamps @done(21-07-17 16:39)
-      ✔ Server processes inputs and updates world status @done(21-07-17 16:39)
-      ✔ Server sends regular world snapshots to all clients @done(21-07-17 16:39)
-    Client:
-      ✔ Client sends inputs and gets world updates @done(21-07-17 16:39)
-        ✔ Input includes timestamp since last server update @done(21-07-17 16:40)
-      ☐ Client simulates effects locally
-      ☐ Interpolates known past states for other entities
-      ☐ Buffer client input - instead of sending when input changes, send how long you had a button down
+Smoothness:
+  ☐ Client-side prediction
+  ✔ Figure out why things moving doesn't feel smooth @done(21-07-24 15:07)
 
+Mouse aim:
+  ☐ Move mouse to aim, click to shoot
+  ☐ Use keyboard to move and change weapons
+  
+Lobby:
+  ☐ Nickname
+  ☐ Quickmatch - match next available player
+  ☐ Support for multiple rooms
+    ☐ Choose room by entering a room code
+  ☐ Main Menu Scene
+    ☐ Make a start screen with the options to play
+    ☐ Go back to it after a game
+
+Game over:
+  ☐ Show better who wins
+  ☐ Back to join game screen after game over
 
 
 
@@ -39,8 +46,6 @@ Bugs/Check Later:
 
 
 
-KeyHandler:
-    ☐ Move to using key up handler
   
 Controller Input:
   ☐ Analog sticks
