@@ -7,4 +7,5 @@ export interface CharacterInput {
   VerticalMovement : number,
   HorizontalMovement : number,
   Shot: number,
+  AimAngle: number,
 }

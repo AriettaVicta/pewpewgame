@@ -79,15 +79,18 @@ export default class SimCharacter {
 
         // Create the bullet.
         let angle = (this.facingDirection == 1) ? 0 : Math.PI;
-        if (input.Shot == ShotType.BigSlow) {
-          // Adjust the angle based on the VerticalMovement of the character.
-          let addAngle = input.VerticalMovement * this.facingDirection;
-          if (addAngle > 0) {
-            angle += (10 * Math.PI / 180);
-          } else if (addAngle < 0) {
-            angle -= (10 * Math.PI / 180);
-          }
+        if (ShotDefinitions[input.Shot].MouseAim) {
+          angle = input.AimAngle;
         }
+        // if (input.Shot == ShotType.BigSlow) {
+        //   // Adjust the angle based on the VerticalMovement of the character.
+        //   let addAngle = input.VerticalMovement * this.facingDirection;
+        //   if (addAngle > 0) {
+        //     angle += (10 * Math.PI / 180);
+        //   } else if (addAngle < 0) {
+        //     angle -= (10 * Math.PI / 180);
+        //   }
+        // }
 
         // Adjust the x value based on which direction we're firing.
         let bulletX = this.x + (this.radius * this.facingDirection);

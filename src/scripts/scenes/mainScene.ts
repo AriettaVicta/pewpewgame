@@ -9,6 +9,7 @@ import HealthIndicator from '../objects/healthindicator';
 import EnergyIndicator from '../objects/energyindicator';
 import { io, Socket } from "socket.io-client";
 import SimBullet from '../../shared/sim-bullet';
+import ShotDefinitions from '../../shared/shotdefs';
 
 const TargetFrameTime = 16.6666;
 
@@ -32,7 +33,7 @@ export default class MainScene extends Phaser.Scene {
   fpsText: FpsText;
   elapsedTime;
   instructionText : Phaser.GameObjects.Text;
-  instructionText2 : Phaser.GameObjects.Text;
+  weaponSelectionText : Phaser.GameObjects.Text;
   gameOverText : Phaser.GameObjects.Text;
   onlineInfoText : Phaser.GameObjects.Text;
   latencyText : Phaser.GameObjects.Text;
@@ -41,6 +42,9 @@ export default class MainScene extends Phaser.Scene {
   playArea : Phaser.GameObjects.Rectangle;
   noMansZone : Phaser.GameObjects.Rectangle;
   accumulatedTime : number;
+
+  mouseAimLine : Phaser.GameObjects.Line;
+  mouseAimAngle : number;
 
   playerGraphic : CharacterGraphic;
   enemyGraphic : CharacterGraphic;
@@ -54,6 +58,8 @@ export default class MainScene extends Phaser.Scene {
   mWasDown : boolean;
   nWasDown : boolean;
   oneWasDown: boolean;
+  twoWasDown : boolean;
+  mouseFired : boolean;
   bulletGraphics : BulletGraphic[];
 
   newGameButton : TextButton;
@@ -72,6 +78,9 @@ export default class MainScene extends Phaser.Scene {
   previousWorldStateTimestamp : number;
   latestWorldState;
   latestWorldStateTimestamp : number;
+
+
+  currentWeapon : number;
 
   constructor() {
     super({ key: 'MainScene' })
@@ -147,7 +156,7 @@ export default class MainScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5,0.5);
 
-    this.instructionText2 = this.add.text(textX, textY-50, '(WSAD/Arrow keys to move)', { 
+    this.weaponSelectionText = this.add.text(textX, textY-50, 'Weapon:', { 
       color: 'white',
       fontSize: '24px',
     }).setOrigin(0.5, 0.5);
@@ -176,7 +185,7 @@ export default class MainScene extends Phaser.Scene {
     this.noMansZone.setStrokeStyle(3, NoMansZoneColor, 1.0);
     this.noMansZone.setOrigin(0, 0);
 
-    this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE');
+    this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE,TWO');
 
       // TODO: Add key up handler
       // scene.input.keyboard.on('keyup', function (eventName, event) { /* ... */ });
@@ -189,6 +198,13 @@ export default class MainScene extends Phaser.Scene {
     // Create energy bars
     this.playerEnergyIndicator = new EnergyIndicator(this, Constants.PlayAreaBufferX + 250, textY-30);
     this.enemyEnergyIndicator = new EnergyIndicator(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth - 450, textY-30);
+
+    // Create the mouse line
+    this.mouseAimLine = this.add.line(0, 0, 0, 0, 0, 0, 0x00FF00, 1.0);
+
+    this.input.on('pointerdown', () => {
+      self.onMouseFire();
+    });
 
     //this.beginNewGame(1);
   }
@@ -207,6 +223,11 @@ export default class MainScene extends Phaser.Scene {
     this.latestWorldState = this.previousWorldState;
     this.latestWorldStateTimestamp = this.previousWorldStateTimestamp;
     this.lastInput = null;
+    this.changeWeapon(ShotType.Plain);
+
+    this.spaceWasDown  = false;
+    this.oneWasDown  = false;
+    this.twoWasDown  = false;
 
     // Cleanup previous state
     if (this.playerGraphic) {
@@ -260,9 +281,80 @@ export default class MainScene extends Phaser.Scene {
         this.updateCharacterPositionsFromSimulation();
         this.updateBulletPositionsFromSimulation();
 
+        this.updateMouse();
+
 
         this.checkGameoverState();
       }
+    }
+  }
+
+  getMyPlayerGraphic() {
+    if (this.side == 1) {
+      return this.playerGraphic;
+    }
+    return this.enemyGraphic;
+  }
+
+  updateMouse() {
+    let mouseX = this.game.input.mousePointer.x;
+    let mouseY = this.game.input.mousePointer.y;
+
+    let myPlayer = this.getMyPlayerGraphic();
+
+    let left = Constants.PlayAreaBufferX;
+    let right = Constants.PlayAreaBufferX + Constants.PlayAreaWidth;
+    let top = Constants.PlayAreaBufferY;
+    let bottom = Constants.PlayAreaBufferY + Constants.PlayAreaHeight;
+
+    // Check top
+    let intersection = getLineIntersection(
+      mouseX, mouseY, myPlayer.x, myPlayer.y,
+      left, top, right, top
+      );
+
+    // Check bottom
+    if (!intersection) {
+      intersection = getLineIntersection(
+        mouseX, mouseY, myPlayer.x, myPlayer.y,
+        left, bottom, right, bottom
+        );
+    }
+    
+    // Check left
+    if (!intersection) {
+      intersection = getLineIntersection(
+        mouseX, mouseY, myPlayer.x, myPlayer.y,
+        left, top, left, bottom
+        );
+    }
+
+    // Check right
+    if (!intersection) {
+      intersection = getLineIntersection(
+        mouseX, mouseY, myPlayer.x, myPlayer.y,
+        right, top, right, bottom
+        );
+    }
+
+    let lineEndX = mouseX;
+    let lineEndY = mouseY;
+    if (intersection) {
+      lineEndX = intersection.x;
+      lineEndY = intersection.y;
+    }
+    
+    this.mouseAimLine.setTo(lineEndX, lineEndY, myPlayer.x, myPlayer.y);
+
+    // Calculate aim angle
+    this.mouseAimAngle = Math.atan2(lineEndY - myPlayer.y, lineEndX - myPlayer.x);
+  }
+
+  onMouseFire() {
+    if (this.inputState == InputState.Playing) {
+      this.mouseFired = true;
+    } else {
+      this.mouseFired = false;
     }
   }
 
@@ -272,6 +364,16 @@ export default class MainScene extends Phaser.Scene {
 
     this.playerEnergyIndicator.update(this.previousWorldState.p1.energy);
     this.enemyEnergyIndicator.update(this.previousWorldState.p2.energy);
+  }
+
+  getWeaponString() {
+    if (this.currentWeapon == ShotType.Plain) {
+      return 'Default';
+    } else if (this.currentWeapon == ShotType.BigSlow) {
+      return 'SlowShot';
+    } else {
+      return '???';
+    }
   }
 
   updateCharacterPositionsFromSimulation() {
@@ -420,8 +522,10 @@ export default class MainScene extends Phaser.Scene {
       VerticalMovement: 0,
       HorizontalMovement: 0,
       Shot: ShotType.None,
+      AimAngle: 0,
     };
 
+    // Movement
     if (this.keys.W.isDown) {
       characterInput.VerticalMovement = -1;
     } else if (this.keys.S.isDown){
@@ -434,20 +538,38 @@ export default class MainScene extends Phaser.Scene {
       characterInput.HorizontalMovement = 1;
     }
     
+    // Fire bullets
     if (this.keys.SPACE.isDown) {
       this.spaceWasDown = true;
     } else if (this.keys.SPACE.isUp && this.spaceWasDown) {
-      characterInput.Shot = ShotType.Plain;
+      characterInput.Shot = this.currentWeapon;
       this.spaceWasDown = false;
     }
 
+    if (this.mouseFired) {
+      this.mouseFired = false;
+      characterInput.Shot = this.currentWeapon;
+    }
+
+    // Change weapon
     if (this.keys.ONE.isDown) {
       this.oneWasDown = true;
     } else if (this.keys.ONE.isUp && this.oneWasDown) {
-      characterInput.Shot = ShotType.BigSlow;
+      this.changeWeapon(ShotType.Plain);
       this.oneWasDown = false;
     }
 
+    if (this.keys.TWO.isDown) {
+      this.twoWasDown = true;
+    } else if (this.keys.TWO.isUp && this.twoWasDown) {
+      this.changeWeapon(ShotType.BigSlow);
+      this.twoWasDown = false;
+    }
+
+    // Update angle based on the mouse line.
+    characterInput.AimAngle = this.mouseAimAngle;
+
+    // Check if input has changed since last frame.
     let inputHasChanged = true;
     if (this.lastInput) {
       if (characterInput.HorizontalMovement == this.lastInput.HorizontalMovement &&
@@ -463,6 +585,17 @@ export default class MainScene extends Phaser.Scene {
     if (inputHasChanged) {
       this.socket.emit('sendinput', characterInput);
     }
+  }
+
+  changeWeapon(newWeapon : number) {
+    this.currentWeapon = newWeapon;
+    if (ShotDefinitions[this.currentWeapon].MouseAim) {
+      this.mouseAimLine.setAlpha(1);
+    } else {
+      this.mouseAimLine.setAlpha(0);
+    }
+
+    this.weaponSelectionText.setText('Weapon: ' + this.getWeaponString());
   }
 
   debugInput() {
@@ -503,3 +636,34 @@ export default class MainScene extends Phaser.Scene {
   }
 }
 
+// line intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+// Determine the intersection point of two line segments
+// Return FALSE if the lines don't intersect
+function getLineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+
+  // Check if none of the lines are of length 0
+	if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4)) {
+		return false
+	}
+
+	let denominator = ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
+
+  // Lines are parallel
+	if (denominator === 0) {
+		return false
+	}
+
+	let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator
+	let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator
+
+  // is the intersection along the segments
+	if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+		return false
+	}
+
+  // Return a object with the x and y coordinates of the intersection
+	let x = x1 + ua * (x2 - x1)
+	let y = y1 + ua * (y2 - y1)
+
+	return {x, y}
+}

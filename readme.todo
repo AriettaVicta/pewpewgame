@@ -22,9 +22,16 @@ Smoothness:
   ✔ Figure out why things moving doesn't feel smooth @done(21-07-24 15:07)
 
 Mouse aim:
-  ☐ Move mouse to aim, click to shoot
-  ☐ Use keyboard to move and change weapons
+  ✔ Move mouse to aim, click to shoot @done(21-07-24 16:05)
+  ✔ Use keyboard to move and change weapons @done(21-07-24 16:19)
   
+Weapon reload speed:
+  ☐ Add a field - reload speed (ms between shots)
+  ☐ Enforce server and client
+
+Add more weapons:
+  
+
 Lobby:
   ☐ Nickname
   ☐ Quickmatch - match next available player

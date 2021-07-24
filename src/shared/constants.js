@@ -12,4 +12,6 @@ export default {
   CharacterRegenEnergyAmountPerMs: 0.01,
 
   ServerUpdateMs: 100,
+
+  TargetFrameTime: 16.6666,
 }
