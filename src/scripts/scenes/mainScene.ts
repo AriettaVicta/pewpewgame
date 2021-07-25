@@ -59,7 +59,7 @@ export default class MainScene extends Phaser.Scene {
   nWasDown : boolean;
   oneWasDown: boolean;
   twoWasDown : boolean;
-  mouseFired : boolean;
+  mouseDown : boolean;
   bulletGraphics : BulletGraphic[];
 
   newGameButton : TextButton;
@@ -203,7 +203,11 @@ export default class MainScene extends Phaser.Scene {
     this.mouseAimLine = this.add.line(0, 0, 0, 0, 0, 0, 0x00FF00, 1.0);
 
     this.input.on('pointerdown', () => {
-      self.onMouseFire();
+      self.onMouseDown();
+    });
+
+    this.input.on('pointerup', () => {
+      self.onMouseUp();
     });
 
     //this.beginNewGame(1);
@@ -350,12 +354,16 @@ export default class MainScene extends Phaser.Scene {
     this.mouseAimAngle = Math.atan2(lineEndY - myPlayer.y, lineEndX - myPlayer.x);
   }
 
-  onMouseFire() {
+  onMouseDown() {
     if (this.inputState == InputState.Playing) {
-      this.mouseFired = true;
+      this.mouseDown = true;
     } else {
-      this.mouseFired = false;
+      this.mouseDown = false;
     }
+  }
+
+  onMouseUp() {
+    this.mouseDown = false;
   }
 
   updateIndicators() {
@@ -546,8 +554,7 @@ export default class MainScene extends Phaser.Scene {
       this.spaceWasDown = false;
     }
 
-    if (this.mouseFired) {
-      this.mouseFired = false;
+    if (this.mouseDown) {
       characterInput.Shot = this.currentWeapon;
     }
 
@@ -578,6 +585,10 @@ export default class MainScene extends Phaser.Scene {
         ) {
         inputHasChanged = false;
       }
+    }
+
+    if (characterInput.Shot != ShotType.None) {
+      inputHasChanged = true;
     }
 
     this.lastInput = characterInput;

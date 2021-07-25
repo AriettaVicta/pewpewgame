@@ -26,11 +26,10 @@ Mouse aim:
   ✔ Use keyboard to move and change weapons @done(21-07-24 16:19)
   
 Weapon reload speed:
-  ☐ Add a field - reload speed (ms between shots)
-  ☐ Enforce server and client
+  ✔ Add a field - reload speed (ms between shots) @done(21-07-24 17:02)
+  ✔ Hold button down to shoot @done(21-07-24 17:07)
+  ✔ Enforce server and client @done(21-07-24 17:07)
 
-Add more weapons:
-  
 
 Lobby:
   ☐ Nickname
@@ -67,9 +66,47 @@ Sound Effects:
   ☐ Hit
   ☐ Exploding
 
+
+Weapon Ideas:
+  ☐ Super fast shot - high energy requirement
+  ☐ Ricochet shot - bounce 2 or 3 times (hit self??)
+  ☐ Super laser - constant stream attack (uses certain amount of energy per second)
+  ☐ Weapon that uses health? super powerful but risky
+  ☐ 3 way shot - either straight or angled for the outside shots
+  ☐ Poison/Damge over time effect
+  ☐ Shoot bombs that set areas of the arena on fire - take damage if you move over them
+    ☐ Travel longer distance if you hold down the fire button before releasing
+  ☐ Explosion type shots that explode after X seconds
+  ☐ Super strong weapon - limited number of shots
+  ☐ Weapon that does no damage but slows the opponent down
+  ☐ Charge weapons - longer charge = more damage
+    ☐ Prevents moving while charging
+  ☐ Weapon that prevents you from firing after you shoot it for X amount of time
+    ☐ Slows you down after you shoot
+    ☐ Prevents ability use
+  ☐ Curved shots - somewhat random curving
+    ☐ Loop-de-loop shot that spins around as you shoot it
+  ☐ Poor accuracy but stronger than normal
+  ☐ If you shoot too fast, you take damage (or maybe you just can't shoot for a while, or slow down)
+  ☐ Stronger each time you hit them, but slower shot speed/reload speed
+    ☐ Harder to hit as the damage gets higher
+  ☐ Weapons that change effect over time as the match goes on
+
+
+
+Play Gradius on stream
+
+Ability Ideas:
+  ☐ Shield
+  ☐ Dash
+  ☐ Ability to slow down bullets on your side of the screen
+
+
 Cool ideas:
   ☐ Slow down effect when more stuff is on screen
-  ☐ Ability to slow down bullets on your side of the screen
+  ☐ Select loadout before matching up
+    ☐ 3-4 weapons and an ability or two
+  
 
 
 

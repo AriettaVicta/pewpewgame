@@ -22,6 +22,8 @@ export default class SimCharacter {
   dead;
   input;
 
+  lastShotTime;
+
   constructor(id, x, y, facingDirection, leftBound, rightBound, fireBullet) {
 
     this.x = x;
@@ -36,6 +38,7 @@ export default class SimCharacter {
     this.health = Constants.CharacterMaxHealth;
     this.energy = Constants.CharacterStartingEnergy;
     this.dead = false;
+    this.lastShotTime = [];
 
     this.input = null;
   }
@@ -72,7 +75,13 @@ export default class SimCharacter {
     if (input.Shot != ShotType.None) {
 
       let energyNeeded = ShotDefinitions[input.Shot].EnergyReq;
-      if (this.energy >= energyNeeded) {
+      let hasEnoughEnergy = this.energy >= energyNeeded;
+      let lastShot = this.lastShotTime[input.Shot];
+      if (!lastShot) lastShot = 0;
+      let timeSinceLastShot = Date.now() - lastShot;
+      let canFire = timeSinceLastShot > ShotDefinitions[input.Shot].ReloadSpeed;
+
+      if (hasEnoughEnergy && canFire) {
 
         // Subtract the energy needed
         this.energy -= energyNeeded;
@@ -97,6 +106,7 @@ export default class SimCharacter {
         let bulletY = this.y;
 
         this.fireBullet(this.id, bulletX, bulletY, input.Shot, angle);
+        this.lastShotTime[input.Shot] = Date.now();
       }
     }
   }
