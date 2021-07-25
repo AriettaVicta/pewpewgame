@@ -631,15 +631,18 @@ export default class MainScene extends Phaser.Scene {
   checkGameoverState() {
     if (this.latestWorldState.p1.dead || this.latestWorldState.p2.dead) {
 
+
       if (this.latestWorldState.p1.dead && this.latestWorldState.p2.dead) {
         // Draw
         this.gameOverText.setText('Draw');
-      } else if (this.latestWorldState.p1.dead) {
-        // Enemy wins
-        this.gameOverText.setText('Enemy wins');
       } else {
-        // Player wins
-        this.gameOverText.setText('Player wins');
+          let youLose = (this.side == 1 && this.latestWorldState.p1.dead) ||
+                        (this.side == 2 && this.latestWorldState.p2.dead);
+          if (youLose) {
+          this.gameOverText.setText('YOU LOSE');
+        } else {
+          this.gameOverText.setText('YOU WIN');
+        }
       }
 
       this.inputState = InputState.GameOver;

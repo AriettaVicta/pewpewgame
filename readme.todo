@@ -41,10 +41,12 @@ Lobby:
     ☐ Go back to it after a game
 
 Game over:
-  ☐ Show better who wins
+  ✔ Show better who wins @done(21-07-24 17:17)
   ☐ Back to join game screen after game over
 
 
+Balance:
+  ☐ Lower player move speed?
 
 Bugs/Check Later:
   ☐ Handle edge case where the bullet is created and destroyed in same server update?
