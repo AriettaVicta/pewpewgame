@@ -3,11 +3,16 @@ import Constants from "../shared/constants.js";
 
 const ServerStepMs = 2;
 
+const GAMESTATE_WAITINGFORPLAYERS = 1;
+const GAMESTATE_STARTED = 2;
+const GAMESTATE_GAMEOVER = 3;
+
 export default class GameRoom {
 
   io;
   p1SocketId;
   p2SocketId;
+  gameState;
 
   unprocessedInput;
 
@@ -15,6 +20,8 @@ export default class GameRoom {
     this.io = io;
 
     this.unprocessedInput = [];
+
+    this.gameState = GAMESTATE_WAITINGFORPLAYERS;
   }
 
   reset() {
@@ -47,7 +54,16 @@ export default class GameRoom {
     }
   }
 
+  isGameFinished() {
+    return (this.gameState == GAMESTATE_GAMEOVER);
+  }
+
+  isWaitingForPlayers() {
+    return (this.gameState == GAMESTATE_WAITINGFORPLAYERS)
+  }
+
   gameOver() {
+    this.gameState = GAMESTATE_GAMEOVER;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -64,6 +80,8 @@ export default class GameRoom {
     if (this.p1SocketId && this.p2SocketId) {
       // Both players have joined.
       // Start the game
+
+      this.gameState = GAMESTATE_STARTED;
 
       //
       // Create the simulation in the server
@@ -106,7 +124,7 @@ export default class GameRoom {
     } else if (this.p2SocketId == socketId) {
       characterInput.OwnerId = 2;
     } else {
-      console.log("ERROR: Couldn't find player")
+      //console.log("ERROR: Couldn't find player")
       return;
     }
 

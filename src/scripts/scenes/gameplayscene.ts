@@ -29,7 +29,7 @@ enum InputState {
 }
 
 
-export default class MainScene extends Phaser.Scene {
+export default class GameplayScene extends Phaser.Scene {
   fpsText: FpsText;
   elapsedTime;
   instructionText : Phaser.GameObjects.Text;
@@ -63,9 +63,8 @@ export default class MainScene extends Phaser.Scene {
   bulletGraphics : BulletGraphic[];
 
   newGameButton : TextButton;
-  joinGameButton : TextButton;
+  leaveGameButton : TextButton;
 
-  sentMessage;
   pingstart;
 
   socket : Socket;
@@ -83,7 +82,7 @@ export default class MainScene extends Phaser.Scene {
   currentWeapon : number;
 
   constructor() {
-    super({ key: 'MainScene' })
+    super({ key: 'GameplayScene' })
   }
 
   create() {
@@ -105,8 +104,6 @@ export default class MainScene extends Phaser.Scene {
     this.socket = io();
     this.socket.connect();
     this.socket.on("joingameresponse", (success) => {
-      var time = Date.now() - self.sentMessage;
-      console.log('response in: ' + time);
       if (success) {
         self.onlineInfoText.setText('Joined game successfully');
       } else {
@@ -167,12 +164,9 @@ export default class MainScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     this.gameOverText.setDepth(Depth_UI);
 
-    // this.newGameButton = new TextButton(this, textX +350, textY-80, 'New Game', () => {
-    //   self.beginNewGame(1);
-    // });
-    this.joinGameButton = new TextButton(this, textX +150, textY-80, 'Join Game', () => {
-      self.sentMessage = Date.now();
-      self.socket.emit('joingame');
+    this.leaveGameButton = new TextButton(this, textX +150, textY-80, 'Leave Game', () => {
+      self.socket.emit('leavegame');
+      self.scene.start('MainMenuScene');
     });
 
     this.playArea = this.add.rectangle(Constants.PlayAreaBufferX, Constants.PlayAreaBufferY, 
@@ -210,11 +204,13 @@ export default class MainScene extends Phaser.Scene {
       self.onMouseUp();
     });
 
+    // Automatically join game
+    self.socket.emit('joingame');
+
     //this.beginNewGame(1);
   }
   
   beginOnlineGame(startGameMessage) {
-    this.joinGameButton.setEnabled(false);
     this.beginNewGame(startGameMessage);
   }
 

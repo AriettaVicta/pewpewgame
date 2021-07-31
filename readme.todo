@@ -30,8 +30,10 @@ Weapon reload speed:
   ✔ Hold button down to shoot @done(21-07-24 17:07)
   ✔ Enforce server and client @done(21-07-24 17:07)
 
+Instructions Scene:
+  ☐ Button to show how to play
 
-Lobby:
+Lobby/Menu:
   ☐ Nickname
   ☐ Quickmatch - match next available player
   ☐ Support for multiple rooms
