@@ -1,24 +1,52 @@
 import { SuperCoolTest, NewTestDef } from "../shared/utils.js"
 import GameRoom from "./gameroom.js";
+import Player from "./player.js";
 
 export default class MyServer {
 
   gameRooms;
   availableRoom;
+  players;
 
   constructor(io) {
     var self = this;
 
+    this.players = [];
     this.gameRooms = [];
     this.availableRoom = new GameRoom(io);
-
-    //this.gameRoom = new GameRoom(io);
 
     // Initialize socket IO handlers
     io.on('connection', (socket) => {
       console.log('a user connected');
+
+      // Add the new player to the list of players
+      let newPlayer = new Player(socket.id, self.generatePlayerName());
+      this.players.push(newPlayer);
+
+      socket.emit('nameupdate', newPlayer.name);
+
+      socket.on('updateplayername', (newName) => {
+        let player = self.getPlayerBySocket(socket.id);
+        if (player) {
+          if (self.isValidName(newName)) {
+            console.log('player changed name: ' + newName);
+            player.name = newName;
+          } else {
+            console.log('player denied name: ' + newName);
+            socket.emit('nameupdate', player.name);
+          }
+        }
+      });
+
       socket.on('disconnect', () => {
         self.userLeftRoom(socket.id);
+        for (var i = 0; i < this.players.length; i++) {
+          let player = this.players[i];
+          if (player.socketId == socket.id) {
+            this.players.splice(i, 1);
+            break;
+          }
+        }
         console.log('user disconnected');
       });
 
@@ -29,7 +57,7 @@ export default class MyServer {
       socket.on('joingame', () => {
         // Try to join the game
         // if full, send an error
-        var joined = self.availableRoom.joinRoom(socket.id);
+        var joined = self.availableRoom.joinRoom(this.getPlayerBySocket(socket.id));
         if (joined) {
           console.log('joined game');
           socket.emit('joingameresponse', true);
@@ -60,6 +88,41 @@ export default class MyServer {
         }
       });
     });
+  }
+
+  getPlayerBySocket(socketId) {
+    for (var i = 0; i < this.players.length; i++) {
+      let player = this.players[i];
+      if (player.socketId == socketId) {
+        return player;
+      }
+    }
+    return null;
+  }
+
+  isValidName(newName) {
+    for (var i = 0; i < this.players.length; i++) {
+      let player = this.players[i];
+      if (player.name == newName) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  generatePlayerName() {
+    let nameToUse = null;
+    do
+    {
+      let playerId = Math.round(Math.random() * 100000);
+      let name = 'Player' + playerId;
+      let validName = this.isValidName(name);
+      if (validName) {
+        nameToUse = name;
+      }
+      console.log('trying name' + nameToUse)
+    } while (nameToUse == null)
+    return nameToUse;
   }
 
   userLeftRoom(socketId) {

@@ -2,6 +2,7 @@ import 'phaser'
 import GameplayScene from './scenes/gameplayscene'
 import PreloadScene from './scenes/preloadScene'
 import MainMenuScene from './scenes/mainmenu';
+import HowToPlayScene from './scenes/howtoplayscene';
 
 const DEFAULT_WIDTH = 1280
 const DEFAULT_HEIGHT = 720
@@ -16,7 +17,15 @@ const config = {
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT
   },
-  scene: [PreloadScene, MainMenuScene, GameplayScene],
+  scene: [PreloadScene, MainMenuScene, GameplayScene, HowToPlayScene],
+  dom: {
+    createContainer: true
+  },
+  callbacks: {
+    postBoot: function(game) {
+      game.domContainer.style.pointerEvents = 'none';
+    },
+  },
 }
 
 window.addEventListener('load', () => {

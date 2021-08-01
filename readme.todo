@@ -17,6 +17,15 @@ Magic power bar - regenerates, used to shoot
 
 Following guide from https://www.gabrielgambetta.com/lag-compensation.html
 
+
+
+Phone controls:
+  ☐ Shoot with touch
+  ☐ Onscreen joystick for movement - look for other work
+
+Twitch:
+  ☐ !website or !game commands
+
 Smoothness:
   ☐ Client-side prediction
   ✔ Figure out why things moving doesn't feel smooth @done(21-07-24 15:07)
@@ -31,20 +40,20 @@ Weapon reload speed:
   ✔ Enforce server and client @done(21-07-24 17:07)
 
 Instructions Scene:
-  ☐ Button to show how to play
+  ✔ Button to show how to play @done(21-07-31 16:24)
 
 Lobby/Menu:
-  ☐ Nickname
-  ☐ Quickmatch - match next available player
-  ☐ Support for multiple rooms
+  ✔ Nickname @done(21-07-31 18:23)
+  ✔ Quickmatch - match next available player @done(21-07-31 16:16)
+  ✔ Support for multiple rooms @done(21-07-31 16:16)
     ☐ Choose room by entering a room code
-  ☐ Main Menu Scene
-    ☐ Make a start screen with the options to play
-    ☐ Go back to it after a game
+  ✔ Main Menu Scene @done(21-07-31 16:16)
+    ✔ Make a start screen with the options to play @done(21-07-31 18:25)
+    ✔ Go back to it after a game @done(21-07-31 18:25)
 
 Game over:
   ✔ Show better who wins @done(21-07-24 17:17)
-  ☐ Back to join game screen after game over
+  ✔ Back to join game screen after game over @done(21-07-31 18:25)
 
 
 Balance:
@@ -64,6 +73,8 @@ Graphics:
   ☐ Player art
   ☐ No man's zone fancy
   ☐ Background?
+  ☐ Energy bar
+  ☐ Health Bar
 
 Sound Effects:
   ☐ Shooting

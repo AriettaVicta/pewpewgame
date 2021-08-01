@@ -17,6 +17,7 @@ export default class SimCharacter {
   facingDirection;
   fireBullet;
   id;
+  name;
   health;
   energy;
   dead;
@@ -24,13 +25,14 @@ export default class SimCharacter {
 
   lastShotTime;
 
-  constructor(id, x, y, facingDirection, leftBound, rightBound, fireBullet) {
+  constructor(id, name, x, y, facingDirection, leftBound, rightBound, fireBullet) {
 
     this.x = x;
     this.y = y;
     this.radius = CharacterRadius;
 
     this.id = id;
+    this.name = name;
     this.facingDirection = facingDirection;
     this.leftBound = leftBound;
     this.rightBound = rightBound;

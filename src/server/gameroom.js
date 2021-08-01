@@ -10,8 +10,9 @@ const GAMESTATE_GAMEOVER = 3;
 export default class GameRoom {
 
   io;
-  p1SocketId;
-  p2SocketId;
+
+  player1;
+  player2;
   gameState;
 
   unprocessedInput;
@@ -25,30 +26,30 @@ export default class GameRoom {
   }
 
   reset() {
-    this.p1SocketId = null;
-    this.p2SocketId = null;
+    this.player1 = null;
+    this.player2 = null;
   }
 
-  joinRoom(socketId) {
-    if (this.p1SocketId && this.p2SocketId) {
+  joinRoom(player) {
+    if (this.player1 && this.player2) {
       return false;
     } else {
-      if (this.p1SocketId) {
-        this.p2SocketId = socketId;
+      if (this.player1) {
+        this.player2 = player;
       } else {
-        this.p1SocketId = socketId;
+        this.player1 = player;
       }
       return true;
     }
   }
 
   leaveRoom(socketId) {
-    if (socketId == this.p1SocketId) {
-      this.p1SocketId = null;
+    if (this.player1 && socketId == this.player1.socketId) {
+      this.player1.socketId = null;
       this.simulation.p1.dead = true;
       this.gameOver();
-    } else if (socketId == this.p2SocketId) {
-      this.p2SocketId = null;
+    } else if (this.player2 && socketId == this.player2.socketId) {
+      this.player2.socketId = null;
       this.simulation.p2.dead = true;
       this.gameOver();
     }
@@ -77,7 +78,8 @@ export default class GameRoom {
 
   startGame() {
     var self = this;
-    if (this.p1SocketId && this.p2SocketId) {
+    if (this.player1 && this.player2 &&
+        this.player1.socketId && this.player2.socketId) {
       // Both players have joined.
       // Start the game
 
@@ -90,7 +92,7 @@ export default class GameRoom {
       // and pass the updates to the clients.
       //
       this.simulation = new Simulation();
-      this.simulation.initialize(Constants.PlayAreaWidth, Constants.PlayAreaHeight);
+      this.simulation.initialize(Constants.PlayAreaWidth, Constants.PlayAreaHeight, this.player1.name, this.player2.name);
       
       let beginningWorldState = this.simulation.getWorldState();
 
@@ -101,11 +103,11 @@ export default class GameRoom {
         self.worldUpdate()
       }, Constants.ServerUpdateMs);
 
-      this.io.to(this.p1SocketId).emit('startgame', {
+      this.io.to(this.player1.socketId).emit('startgame', {
         side: 1,
         worldState: beginningWorldState,
       });
-      this.io.to(this.p2SocketId).emit('startgame', {
+      this.io.to(this.player2.socketId).emit('startgame', {
         side: 2,
         worldState: beginningWorldState,
       });
@@ -119,9 +121,9 @@ export default class GameRoom {
     // Validate input for cheating.
     //
 
-    if (this.p1SocketId == socketId) {
+    if (this.player1 && this.player1.socketId == socketId) {
       characterInput.OwnerId = 1;
-    } else if (this.p2SocketId == socketId) {
+    } else if (this.player2 && this.player2.socketId == socketId) {
       characterInput.OwnerId = 2;
     } else {
       //console.log("ERROR: Couldn't find player")
@@ -179,7 +181,7 @@ export default class GameRoom {
     let worldState = this.simulation.getWorldState();
 
     // Send clients the update.
-    this.io.to(this.p1SocketId).emit('worldupdate', worldState);
-    this.io.to(this.p2SocketId).emit('worldupdate', worldState);
+    this.io.to(this.player1.socketId).emit('worldupdate', worldState);
+    this.io.to(this.player2.socketId).emit('worldupdate', worldState);
   }
 }

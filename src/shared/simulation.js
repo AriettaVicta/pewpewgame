@@ -25,7 +25,7 @@ export default class Simulation {
   constructor() {
   }
 
-  initialize(playAreaWidth, playAreaHeight) {
+  initialize(playAreaWidth, playAreaHeight, player1Name, player2Name) {
 
     var self = this;
 
@@ -42,14 +42,14 @@ export default class Simulation {
 
     const NoMansZoneX = playAreaWidth / 2 - NoMansZoneWidth/2;
 
-    this.p1 = new SimCharacter(1, p1StartX, p1StartY, 1,
+    this.p1 = new SimCharacter(1, player1Name, p1StartX, p1StartY, 1,
       0, NoMansZoneX,
       (ownerId, x, y, shotType, angle) => {
         self.fireBullet(ownerId, x, y, shotType, angle)
       }
     );
 
-    this.p2 = new SimCharacter(2, p2StartX, p2StartY, -1,
+    this.p2 = new SimCharacter(2, player2Name, p2StartX, p2StartY, -1,
       NoMansZoneX + NoMansZoneWidth, playAreaWidth,
       (ownerId, x, y, shotType, angle) => {
         self.fireBullet(ownerId, x, y, shotType, angle)

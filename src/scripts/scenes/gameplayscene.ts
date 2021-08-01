@@ -7,7 +7,6 @@ import CharacterGraphic from '../objects/charactergraphic';
 import { CharacterInput } from '../interfaces';
 import HealthIndicator from '../objects/healthindicator';
 import EnergyIndicator from '../objects/energyindicator';
-import { io, Socket } from "socket.io-client";
 import SimBullet from '../../shared/sim-bullet';
 import ShotDefinitions from '../../shared/shotdefs';
 
@@ -28,6 +27,7 @@ enum InputState {
   GameOver,
 }
 
+declare var Phaser : any;
 
 export default class GameplayScene extends Phaser.Scene {
   fpsText: FpsText;
@@ -37,6 +37,8 @@ export default class GameplayScene extends Phaser.Scene {
   gameOverText : Phaser.GameObjects.Text;
   onlineInfoText : Phaser.GameObjects.Text;
   latencyText : Phaser.GameObjects.Text;
+  player1NameText : Phaser.GameObjects.Text;
+  player2NameText : Phaser.GameObjects.Text;
   inputState : InputState;
   keys;
   playArea : Phaser.GameObjects.Rectangle;
@@ -65,10 +67,6 @@ export default class GameplayScene extends Phaser.Scene {
   newGameButton : TextButton;
   leaveGameButton : TextButton;
 
-  pingstart;
-
-  socket : Socket;
-
   side : number;
 
   lastInput : CharacterInput | any;
@@ -88,6 +86,8 @@ export default class GameplayScene extends Phaser.Scene {
   create() {
     var self = this;
 
+    self.game.socketManager.setCurrentScene(this);
+
     this.onlineInfoText = this.add.text(Constants.PlayAreaBufferX+Constants.PlayAreaWidth + 5, 100,
       'Disconnected', { 
       color: 'white',
@@ -100,35 +100,6 @@ export default class GameplayScene extends Phaser.Scene {
       color: 'white',
       fontSize: '24px',
     }).setOrigin(0, 0);
-
-    this.socket = io();
-    this.socket.connect();
-    this.socket.on("joingameresponse", (success) => {
-      if (success) {
-        self.onlineInfoText.setText('Joined game successfully');
-      } else {
-        self.onlineInfoText.setText('Failed to join game');
-      }
-    });
-    this.socket.on('startgame', (message) => {
-      self.onlineInfoText.setText('Game started! Side: ' + message.side);
-      self.beginOnlineGame(message);
-    });
-    this.socket.on('worldupdate', (worldState) => {
-      self.processWorldUpdate(worldState);
-    })
-
-    this.socket.on('pong', () => {
-      const latency = Date.now() - self.pingstart;
-      self.latencyText.setText('Latency: ' + latency);
-    });
-
-    setInterval(() => {
-      self.pingstart = Date.now();
-      // volatile, so the packet will be discarded if the socket is not connected
-      self.socket.volatile.emit("ping");
-    }, 2000); 
-
 
     this.accumulatedTime = 0;
     this.bulletGraphics = [];
@@ -157,6 +128,18 @@ export default class GameplayScene extends Phaser.Scene {
       color: 'white',
       fontSize: '24px',
     }).setOrigin(0.5, 0.5);
+    
+    this.player1NameText = this.add.text(textX - 300, textY-50,
+      'SampleName', { 
+      color: 'white',
+      fontSize: '24px',
+    }).setOrigin(0, 0);
+
+    this.player2NameText = this.add.text(textX + 200, textY-50,
+      'SampleName', { 
+      color: 'white',
+      fontSize: '24px',
+    }).setOrigin(0, 0);
 
     this.gameOverText = this.add.text(textX, textY + Constants.PlayAreaHeight/2, '', { 
       color: 'white',
@@ -164,9 +147,8 @@ export default class GameplayScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     this.gameOverText.setDepth(Depth_UI);
 
-    this.leaveGameButton = new TextButton(this, textX +150, textY-80, 'Leave Game', () => {
-      self.socket.emit('leavegame');
-      self.scene.start('MainMenuScene');
+    this.leaveGameButton = new TextButton(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY + 300, 'Leave Game', () => {
+      self.returnToMainMenu();
     });
 
     this.playArea = this.add.rectangle(Constants.PlayAreaBufferX, Constants.PlayAreaBufferY, 
@@ -205,9 +187,18 @@ export default class GameplayScene extends Phaser.Scene {
     });
 
     // Automatically join game
-    self.socket.emit('joingame');
+    this.game.socketManager.emit('joingame');
+  }
 
-    //this.beginNewGame(1);
+  returnToMainMenu() {
+    this.game.socketManager.emit('leavegame');
+    this.cleanup();
+    this.scene.start('MainMenuScene');
+
+  }
+
+  cleanup() {
+    this.game.socketManager.setCurrentScene(null);
   }
   
   beginOnlineGame(startGameMessage) {
@@ -224,6 +215,9 @@ export default class GameplayScene extends Phaser.Scene {
     this.latestWorldStateTimestamp = this.previousWorldStateTimestamp;
     this.lastInput = null;
     this.changeWeapon(ShotType.Plain);
+
+    this.player1NameText.setText(startGameMessage.worldState.p1.name);
+    this.player2NameText.setText(startGameMessage.worldState.p2.name);
 
     this.spaceWasDown  = false;
     this.oneWasDown  = false;
@@ -259,6 +253,24 @@ export default class GameplayScene extends Phaser.Scene {
     this.updateCharacterPositionsFromSimulation();
   }
 
+  joinGameResponse(success) {
+    if (success) {
+      this.onlineInfoText.setText('Joined game successfully');
+    } else {
+      this.onlineInfoText.setText('Failed to join game');
+    }
+  }
+
+  startGame(message) {
+    this.onlineInfoText.setText('Game started! Side: ' + message.side);
+    this.beginOnlineGame(message);
+  }
+
+  worldUpdate(worldState) {
+    this.processWorldUpdate(worldState);
+  }
+
+
   preload() {
   }
 
@@ -267,6 +279,7 @@ export default class GameplayScene extends Phaser.Scene {
     if (this.accumulatedTime > TargetFrameTime) {
 
       this.fpsText.update()
+      this.latencyText.setText('Latency: ' + this.game.socketManager.getLatency());
       this.accumulatedTime -= TargetFrameTime;
 
       if (this.inputState == InputState.Playing) {
@@ -590,7 +603,7 @@ export default class GameplayScene extends Phaser.Scene {
     this.lastInput = characterInput;
 
     if (inputHasChanged) {
-      this.socket.emit('sendinput', characterInput);
+      this.game.socketManager.emit('sendinput', characterInput);
     }
   }
 
