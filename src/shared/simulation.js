@@ -60,6 +60,15 @@ export default class Simulation {
 
   }
 
+  killPlayer(num) {
+    if (num == 1 && this.p1) {
+      this.p1.dead = true;
+    }
+    else if (num == 2 && this.p2) {
+      this.p2.dead = true;
+    }
+  }
+
   submitInput(characterInput) {
     if (characterInput.OwnerId == 1) {
       this.p1.input = characterInput;

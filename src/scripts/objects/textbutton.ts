@@ -1,5 +1,5 @@
-const TextBuffer = 5;
-const StrokeWidth = 3;
+const TextBuffer = 7;
+const StrokeWidth = 5;
 
 const RectColorOver = 0x0000FF;
 const RectColorDown = 0x00FF00;
@@ -25,12 +25,12 @@ export default class TextButton extends Phaser.GameObjects.Container {
     this.text = text;
     this.textGameObj = scene.add.text(0, 0, text, { 
       color: TextColor,
-      fontSize: '30px',
+      fontSize: '40px',
       fontStyle: 'bold',
     }).setOrigin(0,0);
 
-    this.rect = scene.add.rectangle(-TextBuffer, -TextBuffer,
-      this.textGameObj.displayWidth + TextBuffer* 2, this.textGameObj.displayHeight + TextBuffer * 2,
+    this.rect = scene.add.rectangle(-TextBuffer, -TextBuffer * 3,
+      this.textGameObj.displayWidth + TextBuffer* 2, this.textGameObj.displayHeight + TextBuffer * 6,
       0, 0.0);
     this.rect.setStrokeStyle(StrokeWidth, RectColorDefault, 1.0);
     this.rect.setOrigin(0, 0);

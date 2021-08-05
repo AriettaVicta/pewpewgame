@@ -147,7 +147,7 @@ export default class GameplayScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     this.gameOverText.setDepth(Depth_UI);
 
-    this.leaveGameButton = new TextButton(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY + 300, 'Leave Game', () => {
+    this.leaveGameButton = new TextButton(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY + 300, 'Quit', () => {
       self.returnToMainMenu();
     });
 

@@ -1,5 +1,6 @@
 import Simulation from "../shared/simulation.js";
 import Constants from "../shared/constants.js";
+import {ServerPlayerState} from '../shared/enums.js';
 
 const ServerStepMs = 2;
 
@@ -23,6 +24,7 @@ export default class GameRoom {
     this.unprocessedInput = [];
 
     this.gameState = GAMESTATE_WAITINGFORPLAYERS;
+    this.simulation = new Simulation();
   }
 
   reset() {
@@ -39,18 +41,17 @@ export default class GameRoom {
       } else {
         this.player1 = player;
       }
+      player.state = ServerPlayerState.Searching;
       return true;
     }
   }
 
   leaveRoom(socketId) {
     if (this.player1 && socketId == this.player1.socketId) {
-      this.player1.socketId = null;
-      this.simulation.p1.dead = true;
+      this.simulation.killPlayer(1);
       this.gameOver();
     } else if (this.player2 && socketId == this.player2.socketId) {
-      this.player2.socketId = null;
-      this.simulation.p2.dead = true;
+      this.simulation.killPlayer(2);
       this.gameOver();
     }
   }
@@ -64,6 +65,7 @@ export default class GameRoom {
   }
 
   gameOver() {
+    let alreadyStarted = (this.gameState != GAMESTATE_WAITINGFORPLAYERS);
     this.gameState = GAMESTATE_GAMEOVER;
     if (this.timer) {
       clearInterval(this.timer);
@@ -73,7 +75,9 @@ export default class GameRoom {
     //
     // Send the final update.
     //
-    this.sendWorldUpdateToClients();
+    if (alreadyStarted) {
+      this.sendWorldUpdateToClients();
+    }
   }
 
   startGame() {
@@ -84,6 +88,8 @@ export default class GameRoom {
       // Start the game
 
       this.gameState = GAMESTATE_STARTED;
+      this.player1.state = ServerPlayerState.Playing;
+      this.player2.state = ServerPlayerState.Playing;
 
       //
       // Create the simulation in the server
@@ -91,7 +97,6 @@ export default class GameRoom {
       // SetInterval to update the simulation every 100ms or so
       // and pass the updates to the clients.
       //
-      this.simulation = new Simulation();
       this.simulation.initialize(Constants.PlayAreaWidth, Constants.PlayAreaHeight, this.player1.name, this.player2.name);
       
       let beginningWorldState = this.simulation.getWorldState();

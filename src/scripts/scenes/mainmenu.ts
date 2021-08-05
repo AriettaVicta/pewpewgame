@@ -1,3 +1,4 @@
+import { ServerPlayerState } from '../../shared/enums';
 import TextButton from '../objects/textbutton';
 import SocketManager from '../socket/socketmanager';
 
@@ -11,6 +12,8 @@ export default class MainMenuScene extends Phaser.Scene {
   nameBox;
   changedNameTimer : number;
 
+  playerListBox : Phaser.GameObjects.Text;
+
   constructor() {
     super({ key: 'MainMenuScene' })
   }
@@ -23,20 +26,20 @@ export default class MainMenuScene extends Phaser.Scene {
     }
     self.game.socketManager.setCurrentScene(this);
 
-    this.quickMatchButton = new TextButton(this, 400, 400, 'Quickmatch', () => {
+    this.quickMatchButton = new TextButton(this, 200, 250, 'Quickmatch', () => {
       self.scene.start('GameplayScene')
     })
-    this.howToPlayButton = new TextButton(this, 400, 500, 'How to Play', () => {
+    this.howToPlayButton = new TextButton(this, 200, 400, 'How to Play', () => {
       self.scene.start('HowToPlayScene')
     })
 
-    this.add.text(400, 300,
+    this.add.text(200, 100,
       'Name:', { 
       color: 'white',
       fontSize: '32px',
     }).setOrigin(0, 0);
     
-    self.nameBox = this.add.dom(520, 300).createElement('input').setOrigin(0,0);
+    self.nameBox = this.add.dom(320, 100).createElement('input').setOrigin(0,0);
     self.nameBox.node.style.fontSize = '24px';
     self.nameBox.node.style.pointerEvents = 'auto';
     self.nameBox.node.value = this.game.socketManager.getPlayerName();
@@ -46,8 +49,20 @@ export default class MainMenuScene extends Phaser.Scene {
     self.nameBox.on('keydown', function (event) {
       self.changedNameTimer = Date.now();
     });
+
+    this.add.text(500, 200,
+      'Players:', { 
+      color: 'white',
+      fontSize: '32px',
+    }).setOrigin(0, 0);
+    this.playerListBox = this.add.text(500, 250,
+      '', { 
+      color: 'white',
+      fontSize: '32px',
+    }).setOrigin(0, 0);
+    this.playerListBox.setText(this.getTextFromPlayerList(this.game.socketManager.getPlayerList()));
   }
-  
+
   update(time, delta) {
     if (this.changedNameTimer) {
       if (Date.now() - this.changedNameTimer > 1000) {
@@ -59,9 +74,36 @@ export default class MainMenuScene extends Phaser.Scene {
         }
       }
     }
+
   }
 
   nameUpdate(newName) {
     this.nameBox.node.value = newName;
+  }
+
+  getStateString(state) {
+    if (state == ServerPlayerState.Lobby) {
+      return 'Lobby';
+    } else if (state == ServerPlayerState.Searching) {
+      return 'Searching';
+    } else if (state == ServerPlayerState.Playing) {
+      return 'Playing';
+    } else {
+      return '???'
+    }
+  }
+
+  getTextFromPlayerList(list) {
+    let text = '';
+    for (var i = 0; i < list.length; i++) {
+      text += list[i].Name + ' - ' + this.getStateString(list[i].State);
+      text += '\n';
+    }
+    return text;
+  }
+
+  playerListUpdate(list) {
+    
+    this.playerListBox.setText(this.getTextFromPlayerList(list));
   }
 }

@@ -9,3 +9,9 @@ export interface CharacterInput {
   Shot: number,
   AimAngle: number,
 }
+
+export interface ServerPlayerInfo {
+  Name: string,
+  Id: string,
+  State: number,
+}

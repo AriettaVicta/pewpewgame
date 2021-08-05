@@ -1,4 +1,4 @@
-import { SuperCoolTest, NewTestDef } from "../shared/utils.js"
+import { ServerPlayerState } from "../shared/enums.js";
 import GameRoom from "./gameroom.js";
 import Player from "./player.js";
 
@@ -11,6 +11,7 @@ export default class MyServer {
   constructor(io) {
     var self = this;
 
+    this.io = io;
     this.players = [];
     this.gameRooms = [];
     this.availableRoom = new GameRoom(io);
@@ -21,7 +22,7 @@ export default class MyServer {
 
       // Add the new player to the list of players
       let newPlayer = new Player(socket.id, self.generatePlayerName());
-      this.players.push(newPlayer);
+      self.addPlayer(newPlayer);
 
       socket.emit('nameupdate', newPlayer.name);
 
@@ -31,6 +32,7 @@ export default class MyServer {
           if (self.isValidName(newName)) {
             console.log('player changed name: ' + newName);
             player.name = newName;
+            self.broadcastPlayerList();
           } else {
             console.log('player denied name: ' + newName);
             socket.emit('nameupdate', player.name);
@@ -40,13 +42,7 @@ export default class MyServer {
 
       socket.on('disconnect', () => {
         self.userLeftRoom(socket.id);
-        for (var i = 0; i < this.players.length; i++) {
-          let player = this.players[i];
-          if (player.socketId == socket.id) {
-            this.players.splice(i, 1);
-            break;
-          }
-        }
+        self.removePlayer(socket.id);
         console.log('user disconnected');
       });
 
@@ -73,12 +69,14 @@ export default class MyServer {
           self.gameRooms.push(self.availableRoom);
           self.availableRoom = new GameRoom(io);
         }
+
+        self.broadcastPlayerList();
       });
 
       socket.on('leavegame', () => {
         // Find game room player is in and leave it.
         self.userLeftRoom(socket.id);
-        console.log('user left room');
+        self.broadcastPlayerList();
       });
 
       socket.on('sendinput', (input) => {
@@ -88,6 +86,38 @@ export default class MyServer {
         }
       });
     });
+  }
+
+  addPlayer(newPlayer) {
+    this.players.push(newPlayer);
+    this.broadcastPlayerList();
+  }
+
+  removePlayer(socketId) {
+    for (var i = 0; i < this.players.length; i++) {
+      let player = this.players[i];
+      if (player.socketId == socketId) {
+        this.players.splice(i, 1);
+        break;
+      }
+    }
+    this.broadcastPlayerList();
+  }
+
+  broadcastPlayerList() {
+    //
+    // Broadcast the player list to everyone.
+    //
+    let playerList = [];
+    for (var i = 0; i < this.players.length; i++) {
+      let player = this.players[i];
+      playerList.push({
+        Name: player.name,
+        Id: player.socketId,
+        State: player.state,
+      })
+    }
+    this.io.emit('playerlist', playerList);
   }
 
   getPlayerBySocket(socketId) {
@@ -126,10 +156,19 @@ export default class MyServer {
   }
 
   userLeftRoom(socketId) {
+    let player = this.getPlayerBySocket(socketId);
+    player.state = ServerPlayerState.Lobby;
+    console.log('user left room');
+    this.availableRoom.leaveRoom(socketId);
+    if (this.availableRoom.isGameFinished()) {
+      console.log('create new gameroom');
+      this.availableRoom = new GameRoom(this.io);
+    }
     for (var i = this.gameRooms.length - 1; i >= 0; i--) {
       let room = this.gameRooms[i];
       room.leaveRoom(socketId);
       if (room.isGameFinished()) {
+        console.log('removing game room');
         this.gameRooms.splice(i, 1);
       }
     }

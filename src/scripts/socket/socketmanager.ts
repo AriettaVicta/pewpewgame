@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import { ServerPlayerInfo } from "../interfaces";
 
 export default class SocketManager {
 
@@ -10,10 +11,12 @@ export default class SocketManager {
 
   currentScene;
   playerName : string;
+  playerList : [ServerPlayerInfo] | any;
 
   constructor() {
     var self = this;
     this.playerName = '';
+    this.playerList = [];
 
     this.socket = io();
     this.socket.connect();
@@ -43,6 +46,12 @@ export default class SocketManager {
       self.playerName = newName;
       if (self.currentScene && self.currentScene.nameUpdate) {
         self.currentScene.nameUpdate(newName);
+      }
+    });
+    this.socket.on('playerlist', (playerList) => {
+      self.playerList = playerList;
+      if (self.currentScene && self.currentScene.playerListUpdate) {
+        self.currentScene.playerListUpdate(self.playerList);
       }
     });
 
@@ -75,6 +84,10 @@ export default class SocketManager {
 
   getLatency() {
     return this.latency;
+  }
+
+  getPlayerList() {
+    return this.playerList;
   }
 
 }

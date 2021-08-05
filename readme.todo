@@ -18,6 +18,8 @@ Magic power bar - regenerates, used to shoot
 Following guide from https://www.gabrielgambetta.com/lag-compensation.html
 
 
+Misc:
+  ☐ Save player name in localstorage
 
 Phone controls:
   ☐ Shoot with touch
@@ -61,6 +63,7 @@ Balance:
 
 Bugs/Check Later:
   ☐ Handle edge case where the bullet is created and destroyed in same server update?
+  ☐ fast bullet disappears before it hits, visually
 
 
 
