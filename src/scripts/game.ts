@@ -4,8 +4,8 @@ import PreloadScene from './scenes/preloadScene'
 import MainMenuScene from './scenes/mainmenu';
 import HowToPlayScene from './scenes/howtoplayscene';
 
-const DEFAULT_WIDTH = 1280
-const DEFAULT_HEIGHT = 720
+const DEFAULT_WIDTH = 1580
+const DEFAULT_HEIGHT = 920
 
 const config = {
   type: Phaser.AUTO,

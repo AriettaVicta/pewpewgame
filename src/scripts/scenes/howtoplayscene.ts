@@ -13,7 +13,7 @@ export default class HowToPlayScene extends Phaser.Scene {
 
     this.mainMenuButton = new TextButton(this, 400, 100, 'Main Menu', () => {
       self.scene.start('MainMenuScene')
-    })
+    }, false, null)
     this.add.text(100, 200,
       'WSAD to move\n \
        Click or Spacebar to shoot\n \

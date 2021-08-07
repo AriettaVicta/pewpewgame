@@ -78,6 +78,7 @@ export default class GameplayScene extends Phaser.Scene {
   game : any;
 
   currentWeapon : number;
+  weaponSelectbuttons : [TextButton] | any;
 
   joystick;
 
@@ -90,11 +91,11 @@ export default class GameplayScene extends Phaser.Scene {
 
     this.input.addPointer(1);
     this.joystick = new VirtualJoyStick(this, {
-      x: Constants.PlayAreaBufferX + 75,
-      y: Constants.PlayAreaBufferY + Constants.PlayAreaHeight - 75,
+      x: Constants.PlayAreaBufferX + 50,
+      y: Constants.PlayAreaBufferY + Constants.PlayAreaHeight - 50,
       radius: 75,
-      base: this.add.circle(0, 0, 75, 0x888888),
-      thumb: this.add.circle(0, 0, 25, 0xcccccc),
+      base: this.add.circle(0, 0, 75, 0x888888, 0.75),
+      thumb: this.add.circle(0, 0, 25, 0xcccccc, 0.75),
       // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
       // forceMin: 16,
       // enable: true
@@ -161,9 +162,28 @@ export default class GameplayScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     this.gameOverText.setDepth(Depth_UI);
 
-    this.leaveGameButton = new TextButton(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY + 300, 'Quit', () => {
+    this.leaveGameButton = new TextButton(this, 
+      Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY + 200,
+      'Quit', () => {
       self.returnToMainMenu();
-    });
+    }, false, null);
+
+    let weaponYOffset = 120;
+    this.weaponSelectbuttons = [];
+    for (var i = 0; i < 2; i++) {
+      let weapon = new TextButton(this, 
+        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 75, Constants.PlayAreaBufferY + 220 + weaponYOffset * (i +1),
+        '' + i, 
+        (param) => {
+          let shot = ShotType.Plain;
+          if (param == 1) {
+            shot = ShotType.BigSlow;
+          }
+          self.changeWeapon(shot);
+      }, true, i);
+      this.weaponSelectbuttons.push(weapon);
+    }
+
 
     this.playArea = this.add.rectangle(Constants.PlayAreaBufferX, Constants.PlayAreaBufferY, 
       Constants.PlayAreaWidth, Constants.PlayAreaHeight, 0xFF0000, 0);

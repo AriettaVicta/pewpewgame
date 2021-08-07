@@ -2,7 +2,7 @@ export default {
 
   PlayAreaWidth: 1000,
   PlayAreaHeight: 600,
-  PlayAreaBufferX: 20,
+  PlayAreaBufferX: 150,
   PlayAreaBufferY: 100,
 
   CharacterMaxHealth: 100,

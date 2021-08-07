@@ -11,16 +11,18 @@ const TextColorDisabled = '#828282';
 export default class TextButton extends Phaser.GameObjects.Container {
   text;
   textGameObj : Phaser.GameObjects.Text;
-  rect : Phaser.GameObjects.Rectangle;
+  shape : Phaser.GameObjects.Rectangle | Phaser.GameObjects.Arc;
   clickCallback;
   enabled : boolean;
+  params;
   
-  constructor(scene, x, y, text, clickCallback) {
+  constructor(scene, x, y, text, clickCallback, circle, params) {
     super(scene, x, y)
 
     var self = this;
 
     this.clickCallback = clickCallback;
+    this.params = params;
     this.enabled = true;
     this.text = text;
     this.textGameObj = scene.add.text(0, 0, text, { 
@@ -29,38 +31,50 @@ export default class TextButton extends Phaser.GameObjects.Container {
       fontStyle: 'bold',
     }).setOrigin(0,0);
 
-    this.rect = scene.add.rectangle(-TextBuffer, -TextBuffer * 3,
-      this.textGameObj.displayWidth + TextBuffer* 2, this.textGameObj.displayHeight + TextBuffer * 6,
-      0, 0.0);
-    this.rect.setStrokeStyle(StrokeWidth, RectColorDefault, 1.0);
-    this.rect.setOrigin(0, 0);
+    if (circle) {
+      this.shape = scene.add.circle(0, 0, 50, 0, 0);
+      this.shape.setStrokeStyle(StrokeWidth, RectColorDefault, 1.0);
+      this.shape.setOrigin(0.5, 0.5);
+      this.textGameObj.setStyle({
+        fontSize: '60px',
+      })
+      this.textGameObj.setOrigin(0.5, 0.5);
+      this.setInteractive(new Phaser.Geom.Circle(this.shape.x, this.shape.y, 
+        60), Phaser.Geom.Circle.Contains);
+    } else {
+      this.shape = scene.add.rectangle(-TextBuffer, -TextBuffer * 3,
+        this.textGameObj.displayWidth + TextBuffer* 2, this.textGameObj.displayHeight + TextBuffer * 6,
+        0, 0.0);
+      this.shape.setStrokeStyle(StrokeWidth, RectColorDefault, 1.0);
+      this.shape.setOrigin(0, 0);
 
-    this.setInteractive(new Phaser.Geom.Rectangle(this.rect.x, this.rect.y, 
-      this.rect.width, this.rect.height), Phaser.Geom.Rectangle.Contains);
+      this.setInteractive(new Phaser.Geom.Rectangle(this.shape.x, this.shape.y, 
+        this.shape.width, this.shape.height), Phaser.Geom.Rectangle.Contains);
+    }
 
     this.add(this.textGameObj);
-    this.add(this.rect);
+    this.add(this.shape);
 
     this.on('pointerup', () => {
       if (self.enabled) {
-        self.rect.setStrokeStyle(StrokeWidth, RectColorDefault);
+        self.shape.setStrokeStyle(StrokeWidth, RectColorDefault);
         self.onClick();
       }
     });
     this.on('pointerdown', () => {
       if (self.enabled) {
-        self.rect.setStrokeStyle(StrokeWidth, RectColorDown);
+        self.shape.setStrokeStyle(StrokeWidth, RectColorDown);
       }
     });
     this.on('pointerout', () => {
       if (self.enabled) {
-        self.rect.setStrokeStyle(StrokeWidth, RectColorDefault);
+        self.shape.setStrokeStyle(StrokeWidth, RectColorDefault);
       }
     });
     this.on('pointerover', (pointer) => {
       if (self.enabled) {
         var color = (pointer.isDown) ? RectColorDown : RectColorOver;
-        self.rect.setStrokeStyle(StrokeWidth, color);
+        self.shape.setStrokeStyle(StrokeWidth, color);
       }
     });
 
@@ -68,7 +82,7 @@ export default class TextButton extends Phaser.GameObjects.Container {
   }
 
   getDisplayHeight() {
-    return this.rect.height;
+    return this.shape.height;
   }
 
   setEnabled(enabled) {
@@ -78,12 +92,12 @@ export default class TextButton extends Phaser.GameObjects.Container {
 
   updateButtonColor() {
     if (!this.enabled) {
-      this.rect.setStrokeStyle(StrokeWidth, RectColorDisabled);
+      this.shape.setStrokeStyle(StrokeWidth, RectColorDisabled);
       this.textGameObj.setStyle({
         color: TextColorDisabled,
       });
     } else {
-      this.rect.setStrokeStyle(StrokeWidth, RectColorDefault);
+      this.shape.setStrokeStyle(StrokeWidth, RectColorDefault);
       this.textGameObj.setStyle({
         color: TextColor,
       });
@@ -91,6 +105,8 @@ export default class TextButton extends Phaser.GameObjects.Container {
   }
 
   onClick() {
-    this.clickCallback();
+    if (this.clickCallback) {
+      this.clickCallback(this.params);
+    }
   }
 }

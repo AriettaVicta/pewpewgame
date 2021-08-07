@@ -29,10 +29,10 @@ export default class MainMenuScene extends Phaser.Scene {
 
     this.quickMatchButton = new TextButton(this, 200, 250, 'Quickmatch', () => {
       self.scene.start('GameplayScene')
-    })
+    }, false, null)
     this.howToPlayButton = new TextButton(this, 200, 400, 'How to Play', () => {
       self.scene.start('HowToPlayScene')
-    })
+    }, false, null)
 
     this.add.text(200, 100,
       'Name:', { 
