@@ -9,6 +9,7 @@ import HealthIndicator from '../objects/healthindicator';
 import EnergyIndicator from '../objects/energyindicator';
 import SimBullet from '../../shared/sim-bullet';
 import ShotDefinitions from '../../shared/shotdefs';
+import VirtualJoyStick from 'phaser3-rex-plugins/plugins/virtualjoystick.js';
 
 const TargetFrameTime = 16.6666;
 
@@ -26,8 +27,6 @@ enum InputState {
   Playing,
   GameOver,
 }
-
-declare var Phaser : any;
 
 export default class GameplayScene extends Phaser.Scene {
   fpsText: FpsText;
@@ -76,8 +75,11 @@ export default class GameplayScene extends Phaser.Scene {
   latestWorldState;
   latestWorldStateTimestamp : number;
 
+  game : any;
 
   currentWeapon : number;
+
+  joystick;
 
   constructor() {
     super({ key: 'GameplayScene' })
@@ -85,6 +87,18 @@ export default class GameplayScene extends Phaser.Scene {
 
   create() {
     var self = this;
+
+    this.input.addPointer(1);
+    this.joystick = new VirtualJoyStick(this, {
+      x: Constants.PlayAreaBufferX + 75,
+      y: Constants.PlayAreaBufferY + Constants.PlayAreaHeight - 75,
+      radius: 75,
+      base: this.add.circle(0, 0, 75, 0x888888),
+      thumb: this.add.circle(0, 0, 25, 0xcccccc),
+      // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
+      // forceMin: 16,
+      // enable: true
+    });
 
     self.game.socketManager.setCurrentScene(this);
 
@@ -364,15 +378,15 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   onMouseDown() {
-    if (this.inputState == InputState.Playing) {
-      this.mouseDown = true;
-    } else {
-      this.mouseDown = false;
-    }
+    // if (this.inputState == InputState.Playing) {
+    //   this.mouseDown = true;
+    // } else {
+    //   this.mouseDown = false;
+    // }
   }
 
   onMouseUp() {
-    this.mouseDown = false;
+    this.mouseDown = true;
   }
 
   updateIndicators() {
@@ -542,6 +556,21 @@ export default class GameplayScene extends Phaser.Scene {
       AimAngle: 0,
     };
 
+    // Read joystick input
+    var cursorKeys = this.joystick.createCursorKeys();
+    if (cursorKeys['up'].isDown) {
+      characterInput.VerticalMovement = -1;
+    }
+    if (cursorKeys['right'].isDown) {
+      characterInput.HorizontalMovement = 1;
+    }
+    if (cursorKeys['left'].isDown) {
+      characterInput.HorizontalMovement = -1;
+    }
+    if (cursorKeys['down'].isDown) {
+      characterInput.VerticalMovement = 1;
+    }
+
     // Movement
     if (this.keys.W.isDown) {
       characterInput.VerticalMovement = -1;
@@ -565,6 +594,7 @@ export default class GameplayScene extends Phaser.Scene {
 
     if (this.mouseDown) {
       characterInput.Shot = this.currentWeapon;
+      this.mouseDown = false;
     }
 
     // Change weapon

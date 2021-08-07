@@ -1,8 +1,7 @@
 import { ServerPlayerState } from '../../shared/enums';
 import TextButton from '../objects/textbutton';
 import SocketManager from '../socket/socketmanager';
-
-declare var Phaser : any;
+import VirtualJoyStick from 'phaser3-rex-plugins/plugins/virtualjoystick.js';
 
 export default class MainMenuScene extends Phaser.Scene {
 
@@ -13,6 +12,8 @@ export default class MainMenuScene extends Phaser.Scene {
   changedNameTimer : number;
 
   playerListBox : Phaser.GameObjects.Text;
+
+  game : any;
 
   constructor() {
     super({ key: 'MainMenuScene' })
@@ -42,7 +43,7 @@ export default class MainMenuScene extends Phaser.Scene {
     self.nameBox = this.add.dom(320, 100).createElement('input').setOrigin(0,0);
     self.nameBox.node.style.fontSize = '24px';
     self.nameBox.node.style.pointerEvents = 'auto';
-    self.nameBox.node.value = this.game.socketManager.getPlayerName();
+    self.nameBox.node.value = self.game.socketManager.getPlayerName();
     self.nameBox.node.maxLength = 15;
     self.nameBox.addListener('keydown');
 
@@ -60,7 +61,7 @@ export default class MainMenuScene extends Phaser.Scene {
       color: 'white',
       fontSize: '32px',
     }).setOrigin(0, 0);
-    this.playerListBox.setText(this.getTextFromPlayerList(this.game.socketManager.getPlayerList()));
+    this.playerListBox.setText(this.getTextFromPlayerList(self.game.socketManager.getPlayerList()));
   }
 
   update(time, delta) {
