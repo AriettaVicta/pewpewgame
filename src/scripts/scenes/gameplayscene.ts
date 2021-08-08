@@ -5,11 +5,10 @@ import BulletGraphic from '../objects/bulletgraphic';
 import {ShotType} from '../../shared/enums';
 import CharacterGraphic from '../objects/charactergraphic';
 import { CharacterInput } from '../interfaces';
-import HealthIndicator from '../objects/healthindicator';
-import EnergyIndicator from '../objects/energyindicator';
 import SimBullet from '../../shared/sim-bullet';
 import ShotDefinitions from '../../shared/shotdefs';
 import VirtualJoyStick from 'phaser3-rex-plugins/plugins/virtualjoystick.js';
+import EnergyBar from '../objects/energybar';
 
 const TargetFrameTime = 16.6666;
 
@@ -31,7 +30,6 @@ enum InputState {
 export default class GameplayScene extends Phaser.Scene {
   fpsText: FpsText;
   elapsedTime;
-  instructionText : Phaser.GameObjects.Text;
   weaponSelectionText : Phaser.GameObjects.Text;
   gameOverText : Phaser.GameObjects.Text;
   onlineInfoText : Phaser.GameObjects.Text;
@@ -49,10 +47,11 @@ export default class GameplayScene extends Phaser.Scene {
 
   playerGraphic : CharacterGraphic;
   enemyGraphic : CharacterGraphic;
-  playerHealthIndicator : HealthIndicator;
-  enemyHealthIndicator : HealthIndicator;
-  playerEnergyIndicator : EnergyIndicator;
-  enemyEnergyIndicator : EnergyIndicator;
+
+  playerHealthIndicator : EnergyBar;
+  enemyHealthIndicator : EnergyBar;
+  playerEnergyIndicator : EnergyBar;
+  enemyEnergyIndicator : EnergyBar;
 
   spaceWasDown : boolean;
   pWasDown : boolean;
@@ -104,7 +103,7 @@ export default class GameplayScene extends Phaser.Scene {
     self.game.socketManager.setCurrentScene(this);
 
     this.onlineInfoText = this.add.text(Constants.PlayAreaBufferX+Constants.PlayAreaWidth + 5, 100,
-      'Disconnected', { 
+      '', { 
       color: 'white',
       fontSize: '24px',
       wordWrap: { width: 200, useAdvancedWrap: true }
@@ -133,28 +132,10 @@ export default class GameplayScene extends Phaser.Scene {
     let textX = Constants.PlayAreaBufferX + Constants.PlayAreaWidth/2;
     let textY = Constants.PlayAreaBufferY;
 
-    this.instructionText = this.add.text(textX, textY-90, 'PEW PEW GAME', { 
-      color: 'white',
-      fontSize: '30px',
-      fontStyle: 'bold',
-    }).setOrigin(0.5,0.5);
-
-    this.weaponSelectionText = this.add.text(textX, textY-50, 'Weapon:', { 
+    this.weaponSelectionText = this.add.text(textX, textY-50, '', { 
       color: 'white',
       fontSize: '24px',
     }).setOrigin(0.5, 0.5);
-    
-    this.player1NameText = this.add.text(textX - 300, textY-50,
-      'SampleName', { 
-      color: 'white',
-      fontSize: '24px',
-    }).setOrigin(0, 0);
-
-    this.player2NameText = this.add.text(textX + 200, textY-50,
-      'SampleName', { 
-      color: 'white',
-      fontSize: '24px',
-    }).setOrigin(0, 0);
 
     this.gameOverText = this.add.text(textX, textY + Constants.PlayAreaHeight/2, '', { 
       color: 'white',
@@ -163,23 +144,23 @@ export default class GameplayScene extends Phaser.Scene {
     this.gameOverText.setDepth(Depth_UI);
 
     this.leaveGameButton = new TextButton(this, 
-      Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY + 200,
+      Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY +Constants.PlayAreaHeight - 50,
       'Quit', () => {
       self.returnToMainMenu();
     }, false, null);
 
+    this.add.text(Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 80, Constants.PlayAreaBufferY, 'Weapon:', { 
+      color: 'white',
+      fontSize: '34px',
+    }).setOrigin(0.5, 0);
     let weaponYOffset = 120;
     this.weaponSelectbuttons = [];
-    for (var i = 0; i < 2; i++) {
+    for (var i = ShotType.Plain; i <= ShotType.BigSlow; i++) {
       let weapon = new TextButton(this, 
-        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 75, Constants.PlayAreaBufferY + 220 + weaponYOffset * (i +1),
-        '' + i, 
+        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 75, Constants.PlayAreaBufferY + 125 + weaponYOffset * (i - ShotType.Plain),
+        '' + (i - 1), 
         (param) => {
-          let shot = ShotType.Plain;
-          if (param == 1) {
-            shot = ShotType.BigSlow;
-          }
-          self.changeWeapon(shot);
+          self.changeWeapon(param);
       }, true, i);
       this.weaponSelectbuttons.push(weapon);
     }
@@ -197,17 +178,30 @@ export default class GameplayScene extends Phaser.Scene {
 
     this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE,TWO');
 
-      // TODO: Add key up handler
-      // scene.input.keyboard.on('keyup', function (eventName, event) { /* ... */ });
+    let player1InfoX = Constants.PlayAreaBufferX;
+    let player2InfoX = Constants.PlayAreaBufferX + Constants.PlayAreaWidth/2;
 
-    // Create health bars
-    this.playerHealthIndicator = new HealthIndicator(this, Constants.PlayAreaBufferX, textY-30);
-    this.enemyHealthIndicator = new HealthIndicator(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth, textY-30);
-    this.enemyHealthIndicator.setOrigin(1, 0);
+    let nameY = Constants.PlayAreaBufferY-75;
+    this.player1NameText = this.add.text(player1InfoX, nameY,
+      'SampleName', {
+      color: 'white',
+      fontSize: '34px',
+    }).setOrigin(0, 0);
+
+    this.player2NameText = this.add.text(player2InfoX, nameY,
+      'SampleName', { 
+      color: 'white',
+      fontSize: '34px',
+    }).setOrigin(0, 0);
+
+    this.playerHealthIndicator = new EnergyBar(this, player1InfoX, textY-30, 0x00FF00);
+    this.playerEnergyIndicator = new EnergyBar(this, this.playerHealthIndicator.x + 250, textY-30, 0x29B6F6);
+
+    this.enemyHealthIndicator = new EnergyBar(this, player2InfoX, textY-30, 0x00FF00);
+    this.enemyEnergyIndicator = new EnergyBar(this, this.enemyHealthIndicator.x + 250, textY-30, 0x29B6F6);
     
-    // Create energy bars
-    this.playerEnergyIndicator = new EnergyIndicator(this, Constants.PlayAreaBufferX + 250, textY-30);
-    this.enemyEnergyIndicator = new EnergyIndicator(this, Constants.PlayAreaBufferX + Constants.PlayAreaWidth - 450, textY-30);
+    this.playerEnergyIndicator.updateFillPercent(0);
+    this.enemyEnergyIndicator.updateFillPercent(0);
 
     // Create the mouse line
     this.mouseAimLine = this.add.line(0, 0, 0, 0, 0, 0, 0x00FF00, 1.0);
@@ -289,14 +283,14 @@ export default class GameplayScene extends Phaser.Scene {
 
   joinGameResponse(success) {
     if (success) {
-      this.onlineInfoText.setText('Joined game successfully');
+      //this.onlineInfoText.setText('Joined game successfully');
     } else {
-      this.onlineInfoText.setText('Failed to join game');
+      //this.onlineInfoText.setText('Failed to join game');
     }
   }
 
   startGame(message) {
-    this.onlineInfoText.setText('Game started! Side: ' + message.side);
+    //this.onlineInfoText.setText('Game started! Side: ' + message.side);
     this.beginOnlineGame(message);
   }
 
@@ -321,8 +315,6 @@ export default class GameplayScene extends Phaser.Scene {
 
         // Update the health indicators
         this.updateIndicators();
-        this.playerHealthIndicator.update(this.previousWorldState.p1.health);
-        this.enemyHealthIndicator.update(this.previousWorldState.p2.health);
 
         // Update the character positions and bullets
         this.updateCharacterPositionsFromSimulation();
@@ -410,11 +402,11 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   updateIndicators() {
-    this.playerHealthIndicator.update(this.previousWorldState.p1.health);
-    this.enemyHealthIndicator.update(this.previousWorldState.p2.health);
+    this.playerHealthIndicator.updateFillPercent(this.previousWorldState.p1.health / this.previousWorldState.p1.maxHealth);
+    this.enemyHealthIndicator.updateFillPercent(this.previousWorldState.p2.health / this.previousWorldState.p2.maxHealth);
 
-    this.playerEnergyIndicator.update(this.previousWorldState.p1.energy);
-    this.enemyEnergyIndicator.update(this.previousWorldState.p2.energy);
+    this.playerEnergyIndicator.updateFillPercent(this.previousWorldState.p1.energy / this.previousWorldState.p1.maxEnergy);
+    this.enemyEnergyIndicator.updateFillPercent(this.previousWorldState.p2.energy / this.previousWorldState.p2.maxEnergy);
   }
 
   getWeaponString() {
@@ -665,7 +657,26 @@ export default class GameplayScene extends Phaser.Scene {
       this.mouseAimLine.setAlpha(0);
     }
 
-    this.weaponSelectionText.setText('Weapon: ' + this.getWeaponString());
+    // Update the button so it looks highlighted.
+    for (var i = 0; i < this.weaponSelectbuttons.length; i++) {
+      let button = this.weaponSelectbuttons[i];
+      let shotType = ShotType.None;
+      if (i == 0) {
+        shotType = ShotType.Plain;
+      } else {
+        shotType = ShotType.BigSlow;
+      }
+
+      if (shotType == newWeapon) {
+        // This button is the selected weapon.
+        button.setEnabled(false);
+      } else {
+        // This button is not selected.
+        button.setEnabled(true);
+      }
+    }
+
+    //this.weaponSelectionText.setText('Weapon: ' + this.getWeaponString());
   }
 
   debugInput() {

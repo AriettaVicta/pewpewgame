@@ -2,6 +2,7 @@ import { ServerPlayerState } from '../../shared/enums';
 import TextButton from '../objects/textbutton';
 import SocketManager from '../socket/socketmanager';
 import VirtualJoyStick from 'phaser3-rex-plugins/plugins/virtualjoystick.js';
+import EnergyBar from '../objects/energybar';
 
 export default class MainMenuScene extends Phaser.Scene {
 

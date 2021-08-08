@@ -19,7 +19,9 @@ export default class SimCharacter {
   id;
   name;
   health;
+  maxHealth;
   energy;
+  maxEnergy;
   dead;
   input;
 
@@ -39,6 +41,8 @@ export default class SimCharacter {
     this.fireBullet = fireBullet;
     this.health = Constants.CharacterMaxHealth;
     this.energy = Constants.CharacterStartingEnergy;
+    this.maxHealth = Constants.CharacterMaxHealth;
+    this.maxEnergy = Constants.CharacterMaxEnergy;
     this.dead = false;
     this.lastShotTime = [];
 

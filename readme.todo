@@ -21,16 +21,19 @@ Following guide from https://www.gabrielgambetta.com/lag-compensation.html
 Misc:
   ☐ Save player name in localstorage
 
+Touch/Mouse cleanup:
+  ☐ Figure out how to capture the mouse/touch inputs so you don't shoot
+
 Health/Energy bars:
-  ☐ Simple rectangle that fills up by %
-  ☐ Segmented by 10 units for health perhaps
+  ✔ Simple rectangle that fills up by % @done(21-08-07 16:58)
+  ✔ Segmented by 10 units for health perhaps @done(21-08-07 16:58)
 
 
 Phone controls:
   https://rexrainbow.github.io/phaser3-rex-notes/docs/site/virtualjoystick/#import-class
-  ☐ Shoot with touch
-  ☐ Onscreen joystick for movement
-  ☐ Switch weapon buttons
+  ✔ Shoot with touch @done(21-08-07 16:58)
+  ✔ Onscreen joystick for movement @done(21-08-07 16:58)
+  ✔ Switch weapon buttons @done(21-08-07 16:59)
 
 
 Twitch:
@@ -84,8 +87,6 @@ Graphics:
   ☐ Player art
   ☐ No man's zone fancy
   ☐ Background?
-  ☐ Energy bar
-  ☐ Health Bar
 
 Sound Effects:
   ☐ Shooting
