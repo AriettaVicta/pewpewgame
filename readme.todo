@@ -22,52 +22,20 @@ Misc:
   ☐ Save player name in localstorage
 
 Touch/Mouse cleanup:
-  ☐ Figure out how to capture the mouse/touch inputs so you don't shoot
-
-Health/Energy bars:
-  ✔ Simple rectangle that fills up by % @done(21-08-07 16:58)
-  ✔ Segmented by 10 units for health perhaps @done(21-08-07 16:58)
-
-
-Phone controls:
-  https://rexrainbow.github.io/phaser3-rex-notes/docs/site/virtualjoystick/#import-class
-  ✔ Shoot with touch @done(21-08-07 16:58)
-  ✔ Onscreen joystick for movement @done(21-08-07 16:58)
-  ✔ Switch weapon buttons @done(21-08-07 16:59)
-
+  ✔ Figure out how to capture the mouse/touch inputs so you don't shoot @done(21-08-07 17:33)
+    ✔ Like letting up on joystick or the weapon select buttons @done(21-08-07 17:33)
+  ✔ Update the aim mouse line on TouchDown event @done(21-08-07 17:39)
 
 Twitch:
   ☐ !website or !game commands
 
 Smoothness:
   ☐ Client-side prediction
-  ✔ Figure out why things moving doesn't feel smooth @done(21-07-24 15:07)
+    ☐ Run client movement locally
+    ☐ Server-side - play user inputs in the past based on elapsed time during that update.
 
-Mouse aim:
-  ✔ Move mouse to aim, click to shoot @done(21-07-24 16:05)
-  ✔ Use keyboard to move and change weapons @done(21-07-24 16:19)
-  
-Weapon reload speed:
-  ✔ Add a field - reload speed (ms between shots) @done(21-07-24 17:02)
-  ✔ Hold button down to shoot @done(21-07-24 17:07)
-  ✔ Enforce server and client @done(21-07-24 17:07)
-
-Instructions Scene:
-  ✔ Button to show how to play @done(21-07-31 16:24)
-
-Lobby/Menu:
-  ✔ Nickname @done(21-07-31 18:23)
-  ✔ Quickmatch - match next available player @done(21-07-31 16:16)
-  ✔ Support for multiple rooms @done(21-07-31 16:16)
+Lobby/Menu Private match:
     ☐ Choose room by entering a room code
-  ✔ Main Menu Scene @done(21-07-31 16:16)
-    ✔ Make a start screen with the options to play @done(21-07-31 18:25)
-    ✔ Go back to it after a game @done(21-07-31 18:25)
-
-Game over:
-  ✔ Show better who wins @done(21-07-24 17:17)
-  ✔ Back to join game screen after game over @done(21-07-31 18:25)
-
 
 Balance:
   ☐ Lower player move speed?

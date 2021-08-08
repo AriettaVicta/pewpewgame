@@ -60,6 +60,7 @@ export default class GameplayScene extends Phaser.Scene {
   oneWasDown: boolean;
   twoWasDown : boolean;
   mouseDown : boolean;
+  mouseFire : boolean;
   bulletGraphics : BulletGraphic[];
 
   newGameButton : TextButton;
@@ -89,15 +90,22 @@ export default class GameplayScene extends Phaser.Scene {
     var self = this;
 
     this.input.addPointer(1);
+
+    let base = this.add.circle(0, 0, 75, 0x888888, 0.75);
     this.joystick = new VirtualJoyStick(this, {
       x: Constants.PlayAreaBufferX + 50,
       y: Constants.PlayAreaBufferY + Constants.PlayAreaHeight - 50,
       radius: 75,
-      base: this.add.circle(0, 0, 75, 0x888888, 0.75),
+      base: base,
       thumb: this.add.circle(0, 0, 25, 0xcccccc, 0.75),
       // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
       // forceMin: 16,
       // enable: true
+    });
+    base.on('pointerdown', (pointer, localX, localY, event) => {
+      event.stopPropogation();
+    }).on('pointerup', (pointer, localX, localY, event) => {
+      //event.stopPropogation();
     });
 
     self.game.socketManager.setCurrentScene(this);
@@ -204,14 +212,14 @@ export default class GameplayScene extends Phaser.Scene {
     this.enemyEnergyIndicator.updateFillPercent(0);
 
     // Create the mouse line
-    this.mouseAimLine = this.add.line(0, 0, 0, 0, 0, 0, 0x00FF00, 1.0);
+    this.mouseAimLine = this.add.line(0, 0, 0, 0, 0, 0, 0x00FF00, 0.0);
 
-    this.input.on('pointerdown', () => {
-      self.onMouseDown();
+    this.input.on('pointerdown', (pointer, localX, localY, event) => {
+      self.onMouseDown(pointer, localX, localY, event);
     });
 
-    this.input.on('pointerup', () => {
-      self.onMouseUp();
+    this.input.on('pointerup', (pointer, localX, localY, event) => {
+      self.onMouseUp(pointer, localX, localY, event);
     });
 
     // Automatically join game
@@ -320,7 +328,7 @@ export default class GameplayScene extends Phaser.Scene {
         this.updateCharacterPositionsFromSimulation();
         this.updateBulletPositionsFromSimulation();
 
-        this.updateMouse();
+        //this.updateMouse();
 
 
         this.checkGameoverState();
@@ -336,8 +344,12 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   updateMouse() {
-    let mouseX = this.game.input.mousePointer.x;
-    let mouseY = this.game.input.mousePointer.y;
+    this.updateMouseLine(this.game.input.mousePointer);
+  }
+
+  updateMouseLine(pointer) {
+    let mouseX = pointer.x;
+    let mouseY = pointer.y;
 
     let myPlayer = this.getMyPlayerGraphic();
 
@@ -389,16 +401,21 @@ export default class GameplayScene extends Phaser.Scene {
     this.mouseAimAngle = Math.atan2(lineEndY - myPlayer.y, lineEndX - myPlayer.x);
   }
 
-  onMouseDown() {
-    // if (this.inputState == InputState.Playing) {
-    //   this.mouseDown = true;
-    // } else {
-    //   this.mouseDown = false;
-    // }
+  onMouseDown(pointer, localX, localY, event) {
+    if (this.inputState == InputState.Playing) {
+      this.mouseDown = true;
+    } else {
+      this.mouseDown = false;
+    }
   }
 
-  onMouseUp() {
-    this.mouseDown = true;
+  onMouseUp(pointer, localX, localY, event) {
+    if (this.mouseDown) {
+      this.mouseFire = true;
+      this.updateMouseLine(pointer);
+      // Make sure we update the angle
+    }
+    this.mouseDown = false;
   }
 
   updateIndicators() {
@@ -604,9 +621,9 @@ export default class GameplayScene extends Phaser.Scene {
       this.spaceWasDown = false;
     }
 
-    if (this.mouseDown) {
+    if (this.mouseFire) {
       characterInput.Shot = this.currentWeapon;
-      this.mouseDown = false;
+      this.mouseFire = false;
     }
 
     // Change weapon
