@@ -17,7 +17,7 @@ var ShotDefinitions;// : ShotDefinition[];
 ShotDefinitions = [];
 ShotDefinitions[ShotType.Plain] = {
   Type: ShotType.Plain,
-  Speed: 0.4,
+  Speed: 50,
   Radius: 5,
   Damage: 10,
   EnergyReq: 7,
@@ -27,7 +27,7 @@ ShotDefinitions[ShotType.Plain] = {
 }
 ShotDefinitions[ShotType.BigSlow] = {
   Type: ShotType.BigSlow,
-  Speed: 0.1,
+  Speed: 15,
   Radius: 15,
   Damage: 10,
   EnergyReq: 10,

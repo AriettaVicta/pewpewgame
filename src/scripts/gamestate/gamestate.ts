@@ -156,8 +156,8 @@ export class GameState extends NetplayState<GameInput> {
     for (var i = this.Bullets.length - 1; i >= 0 ; --i) {
       let bullet = this.Bullets[i];
       
-      bullet.x = bullet.x + Math.cos(bullet.angle) * bullet.speed * Constants.Timestep;
-      bullet.y = bullet.y + Math.sin(bullet.angle) * bullet.speed * Constants.Timestep;
+      bullet.x = bullet.x + Math.cos(bullet.angle) * (bullet.speed / Constants.Timestep);
+      bullet.y = bullet.y + Math.sin(bullet.angle) * (bullet.speed / Constants.Timestep);
 
       // Check for collisions between players
       let checkCollisionWithPlayer : PlayerState | null = null;
