@@ -32,7 +32,7 @@ export default class TextButton extends Phaser.GameObjects.Container {
     }).setOrigin(0,0);
 
     if (circle) {
-      this.shape = scene.add.circle(0, 0, 50, 0, 0);
+      this.shape = scene.add.circle(0, 0, 60, 0, 0);
       this.shape.setStrokeStyle(StrokeWidth, RectColorDefault, 1.0);
       this.shape.setOrigin(0.5, 0.5);
       this.textGameObj.setStyle({
