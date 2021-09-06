@@ -121,7 +121,7 @@ export default class GameplayScene extends Phaser.Scene {
     } else if (data.type == 'state') {
       this.rollbackNetcode!.onStateSync(data.frame, data.state);
     } else if (data.type == "ping-req") {
-      this.connection!.send({ type: "ping-resp", sent_time: data.sent_time });
+      this.sendPeerMessage({ type: "ping-resp", sent_time: data.sent_time });
     } else if (data.type == "ping-resp") {
       this.pingMeasure.update(Date.now() - data.sent_time);
     } else if (data.type == "startmatch") {
@@ -167,6 +167,20 @@ export default class GameplayScene extends Phaser.Scene {
     return initialInputs;
   }
 
+  sendPeerMessage(message) {
+    var self = this;
+
+    const DEBUG_DELAY = 0;
+
+    if (DEBUG_DELAY) {
+      setTimeout(() => {
+        self.connection!.send(message);
+      }, DEBUG_DELAY);
+    } else {
+      self.connection!.send(message);
+    }
+  }
+
   setupNetcode() {
     var self = this;
 
@@ -180,15 +194,15 @@ export default class GameplayScene extends Phaser.Scene {
       Constants.Timestep,
       () => self.getInput(),
       (frame, input) => { // broadcast input
-        self.connection!.send({ type: "input", frame: frame, input: input.serialize() });
+        self.sendPeerMessage({ type: "input", frame: frame, input: input.serialize() });
       },
       (frame, state) => { // broadcast state
-        self.connection!.send({ type: "state", frame: frame, state: state });
+        self.sendPeerMessage({ type: "state", frame: frame, state: state });
       }
     )
 
     this.pingInterval = global.setInterval(() => {
-      self.connection!.send({ type: "ping-req", sent_time: Date.now() });
+      self.sendPeerMessage({ type: "ping-req", sent_time: Date.now() });
     }, PING_INTERVAL);
 
     this.rollbackNetcode!.start();
