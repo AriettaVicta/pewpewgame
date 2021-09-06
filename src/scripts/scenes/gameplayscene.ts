@@ -401,7 +401,7 @@ export default class GameplayScene extends Phaser.Scene {
     this.noMansZone.setStrokeStyle(3, NoMansZoneColor, 1.0);
     this.noMansZone.setOrigin(0, 0);
 
-    this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE,TWO');
+    this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE,TWO', false);
 
     let player1InfoX = Constants.PlayAreaBufferX;
     let player2InfoX = Constants.PlayAreaBufferX + Constants.PlayAreaWidth/2;

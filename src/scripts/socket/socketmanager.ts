@@ -80,6 +80,7 @@ export default class SocketManager {
   }
 
   updatePlayerName(newName) {
+    this.playerName = newName;
     this.socket.emit('updateplayername', newName);
   }
 

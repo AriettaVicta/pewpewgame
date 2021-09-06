@@ -35,25 +35,11 @@ Example scroll wheel
         soil.tilePositionY += deltaY * 0.5;
     });
 
-Investigate dual stick controls:
-  ☐ Check out brawlstars
-
-Twitch:
-  ☐ !website or !game commands
-
 Lobby/Menu Private match:
     ☐ Choose room by entering a room code
 
 Balance:
   ☐ Lower player move speed?
-
-Bugs/Check Later:
-  ☐ Handle edge case where the bullet is created and destroyed in same server update?
-  ☐ fast bullet disappears before it hits, visually
-
-
-
-
   
 Controller Input:
   ☐ Analog sticks
