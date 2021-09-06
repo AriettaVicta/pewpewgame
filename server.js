@@ -14,6 +14,9 @@ import MyServer from './src/server/myserver.js';
 
 const myServer = new MyServer(io);
 
+import PeerServer from 'peer';
+const peerServer = PeerServer.PeerServer({ port: 9000, path: '/myapp' });
+
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);

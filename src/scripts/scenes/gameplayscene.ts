@@ -2,15 +2,26 @@ import FpsText from '../objects/fpsText'
 import TextButton from '../objects/textbutton';
 import Constants from '../../shared/constants';
 import BulletGraphic from '../objects/bulletgraphic';
-import {ShotType} from '../../shared/enums';
+import {ReportResult, ShotType} from '../../shared/enums';
 import CharacterGraphic from '../objects/charactergraphic';
-import { CharacterInput } from '../interfaces';
 import SimBullet from '../../shared/sim-bullet';
 import ShotDefinitions from '../../shared/shotdefs';
 import VirtualJoyStick from 'phaser3-rex-plugins/plugins/virtualjoystick.js';
 import EnergyBar from '../objects/energybar';
 
-const TargetFrameTime = 16.6666;
+import Peer from 'peerjs';
+
+import { NetplayPlayer } from 'netplayjs';
+
+import { RollbackNetcode } from '../netcode/rollback';
+import EWMASD from '../netcode/ewmasd';
+
+import { v4 as uuidv4 } from 'uuid';
+import { GameInput } from '../gamestate/types';
+import { GameState } from '../gamestate/gamestate';
+
+const PING_INTERVAL = 100;
+
 
 const PlayerColor = 0x1fe5ff;
 const EnemyColor = 0xff0090;
@@ -27,15 +38,18 @@ enum InputState {
   GameOver,
 }
 
+const Player1SideLeft = 1;
+const Player2SideRight = 2;
+
 export default class GameplayScene extends Phaser.Scene {
   fpsText: FpsText;
-  elapsedTime;
   weaponSelectionText : Phaser.GameObjects.Text;
   gameOverText : Phaser.GameObjects.Text;
   onlineInfoText : Phaser.GameObjects.Text;
   latencyText : Phaser.GameObjects.Text;
   player1NameText : Phaser.GameObjects.Text;
   player2NameText : Phaser.GameObjects.Text;
+  waitingForPlayerText : Phaser.GameObjects.Text;
   inputState : InputState;
   keys;
   playArea : Phaser.GameObjects.Rectangle;
@@ -66,31 +80,217 @@ export default class GameplayScene extends Phaser.Scene {
   newGameButton : TextButton;
   leaveGameButton : TextButton;
 
-  side : number;
-
-  lastInput : CharacterInput | any;
-
-  previousWorldState;
-  previousWorldStateTimestamp : number;
-  latestWorldState;
-  latestWorldStateTimestamp : number;
+  myPlayerSide : number;
 
   game : any;
 
   currentWeapon : number;
   weaponSelectbuttons : [TextButton] | any;
 
-  joystick;
+  joystick : VirtualJoyStick;
+
+  // Peer stuff
+  peer : Peer | null;
+  peerId : string;
+  connection : Peer.DataConnection | null;
+  rollbackNetcode : RollbackNetcode<GameState, GameInput> | null;
+  host : boolean;
+  players : Array<NetplayPlayer>;
+  pingMeasure: EWMASD = new EWMASD(0.2);
+  gameState : GameState;
+  opponentPeerId : string;
+  pingInterval : NodeJS.Timeout | null;
+  showRollbackDebugText : boolean;
 
   constructor() {
     super({ key: 'GameplayScene' })
+
+    this.showRollbackDebugText = false;
   }
+
+  handleRemoteData(data) {
+    if (data.type == 'input') {
+      if (this.rollbackNetcode == null) {
+        console.log('not ready for input yet!')
+      } else {
+        let remotePlayerIndex = (this.host ? 1 : 0);
+        let input = new GameInput();
+        input.deserialize(data.input);
+        this.rollbackNetcode!.onRemoteInput(data.frame, this.players![remotePlayerIndex], input);
+      }
+    } else if (data.type == 'state') {
+      this.rollbackNetcode!.onStateSync(data.frame, data.state);
+    } else if (data.type == "ping-req") {
+      this.connection!.send({ type: "ping-resp", sent_time: data.sent_time });
+    } else if (data.type == "ping-resp") {
+      this.pingMeasure.update(Date.now() - data.sent_time);
+    } else if (data.type == "startmatch") {
+      // Client starts match
+      this.host = false;
+      this.startMatch();
+    } else {
+      console.log(data);
+    }
+  }
+
+  startMatch() {
+    var self = this;
+
+    this.gameState = new GameState();
+
+    this.beginNewGame();
+
+    if (self.host) { // Host
+      this.myPlayerSide = Player1SideLeft;
+      //self.connection.send({ type: "startmatch" })
+      self.players = [
+        new NetplayPlayer(0, true, true), // Player 0 is us, acting as a host.
+        new NetplayPlayer(1, false, false), // Player 1 is our peer, acting as a client.
+      ];
+    } else { // Client
+      this.myPlayerSide = Player2SideRight;
+      self.players  = [
+        new NetplayPlayer(0, false, true), // Player 0 is our peer, the host.
+        new NetplayPlayer(1, true, false), // Player 1 is us, a client
+      ];
+    }
+    this.setupNetcode();
+  }
+
+  getInitialInputs(
+    players: Array<NetplayPlayer>
+  ): Map<NetplayPlayer, GameInput> {
+    let initialInputs: Map<NetplayPlayer, GameInput> = new Map();
+    for (let player of players) {
+      initialInputs.set(player, new GameInput());
+    }
+    return initialInputs;
+  }
+
+  setupNetcode() {
+    var self = this;
+
+    this.rollbackNetcode = new RollbackNetcode(
+      self.host, // host
+      self.gameState,
+      self.players,
+      self.getInitialInputs(self.players),
+      10, // maxPredictedFrames
+      this.pingMeasure,
+      Constants.Timestep,
+      () => self.getInput(),
+      (frame, input) => { // broadcast input
+        self.connection!.send({ type: "input", frame: frame, input: input.serialize() });
+      },
+      (frame, state) => { // broadcast state
+        self.connection!.send({ type: "state", frame: frame, state: state });
+      }
+    )
+
+    this.pingInterval = global.setInterval(() => {
+      self.connection!.send({ type: "ping-req", sent_time: Date.now() });
+    }, PING_INTERVAL);
+
+    this.rollbackNetcode!.start();
+  }
+
+  getInput() : GameInput {
+    let input = new GameInput();
+
+    // Read joystick input
+    var cursorKeys = this.joystick.createCursorKeys();
+    if (cursorKeys['up'].isDown) {
+      input.VerticalMovement = -1;
+    }
+    if (cursorKeys['right'].isDown) {
+      input.HorizontalMovement = 1;
+    }
+    if (cursorKeys['left'].isDown) {
+      input.HorizontalMovement = -1;
+    }
+    if (cursorKeys['down'].isDown) {
+      input.VerticalMovement = 1;
+    }
+
+    // Movement
+    if (this.keys.W.isDown) {
+      input.VerticalMovement = -1;
+    } else if (this.keys.S.isDown){
+      input.VerticalMovement = 1;
+    }
+
+    if (this.keys.A.isDown) {
+      input.HorizontalMovement = -1;
+    } else if (this.keys.D.isDown){
+      input.HorizontalMovement = 1;
+    }
+
+    // Fire bullets
+    if (this.keys.SPACE.isDown) {
+      this.spaceWasDown = true;
+    } else if (this.keys.SPACE.isUp && this.spaceWasDown) {
+      input.Shot = this.currentWeapon;
+      this.spaceWasDown = false;
+    }
+
+    if (this.mouseFire) {
+      input.Shot = this.currentWeapon;
+      this.mouseFire = false;
+    }
+
+    // Change weapon
+    if (this.keys.ONE.isDown) {
+      this.oneWasDown = true;
+    } else if (this.keys.ONE.isUp && this.oneWasDown) {
+      this.changeWeapon(ShotType.Plain);
+      this.oneWasDown = false;
+    }
+
+    if (this.keys.TWO.isDown) {
+      this.twoWasDown = true;
+    } else if (this.keys.TWO.isUp && this.twoWasDown) {
+      this.changeWeapon(ShotType.BigSlow);
+      this.twoWasDown = false;
+    }
+
+    // Update angle based on the mouse line.
+    input.AimAngle = this.mouseAimAngle;
+
+    return input;
+  }
+
+  rollbackDebugText;
 
   create() {
     var self = this;
 
+    this.rollbackDebugText = this.add.text(700, 200, '');
+
+    const hostInfo = {
+      host: '/',
+      port: 9000,
+      path: '/myapp'
+    };
+
+    self.peerId = uuidv4();
+    self.peer = new Peer(self.peerId, hostInfo);
+    self.peer.on('error', (error) => {
+      console.error('ERROR: ' + error);
+    });
+    self.peer.on('connection', (conn) => {
+      self.connection = conn;
+      self.connection.on('data', (data) => {
+        self.handleRemoteData(data);
+      });
+      self.connection.on('open', () => {
+        // Setup and and start the match.
+        self.startMatch();
+      });
+    });
+
     this.input.addPointer(1);
 
+    // Joystick graphics object
     let base = this.add.circle(0, 0, 75, 0x888888, 0.75);
     this.joystick = new VirtualJoyStick(this, {
       x: Constants.PlayAreaBufferX + 50,
@@ -103,7 +303,7 @@ export default class GameplayScene extends Phaser.Scene {
       // enable: true
     });
     base.on('pointerdown', (pointer, localX, localY, event) => {
-      event.stopPropogation();
+      //event.stopPropogation();
     }).on('pointerup', (pointer, localX, localY, event) => {
       //event.stopPropogation();
     });
@@ -117,7 +317,7 @@ export default class GameplayScene extends Phaser.Scene {
       wordWrap: { width: 200, useAdvancedWrap: true }
     }).setOrigin(0, 0);
 
-    this.latencyText = this.add.text(Constants.PlayAreaWidth + 5, 20,
+    this.latencyText = this.add.text(Constants.PlayAreaWidth + 120, 10,
       'Latency: 0', { 
       color: 'white',
       fontSize: '24px',
@@ -134,6 +334,14 @@ export default class GameplayScene extends Phaser.Scene {
     };
 
     this.inputState = InputState.WaitingToJoinGame;
+    this.waitingForPlayerText = this.add.text(
+      Constants.PlayAreaBufferX + Constants.PlayAreaWidth/2,
+      Constants.PlayAreaBufferY + Constants.PlayAreaHeight/2,
+      'Waiting for player...', { 
+      color: 'white',
+      fontSize: '74px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5);
 
     this.fpsText = new FpsText(this)
 
@@ -191,13 +399,13 @@ export default class GameplayScene extends Phaser.Scene {
 
     let nameY = Constants.PlayAreaBufferY-75;
     this.player1NameText = this.add.text(player1InfoX, nameY,
-      'SampleName', {
+      '', {
       color: 'white',
       fontSize: '34px',
     }).setOrigin(0, 0);
 
     this.player2NameText = this.add.text(player2InfoX, nameY,
-      'SampleName', { 
+      '', { 
       color: 'white',
       fontSize: '34px',
     }).setOrigin(0, 0);
@@ -223,7 +431,9 @@ export default class GameplayScene extends Phaser.Scene {
     });
 
     // Automatically join game
-    this.game.socketManager.emit('joingame');
+    this.game.socketManager.emit('joingame', {
+        PeerId: self.peerId,
+    });
   }
 
   returnToMainMenu() {
@@ -233,31 +443,63 @@ export default class GameplayScene extends Phaser.Scene {
 
   }
 
+  exitPeerToPeerConnection() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    if (this.peer) {
+      this.peer.disconnect();
+      this.peer.destroy();
+    }
+    this.connection = null;
+    if (this.rollbackNetcode) {
+      this.rollbackNetcode.stop();
+      this.rollbackNetcode = null;
+    }
+  }
+
   cleanup() {
+    this.exitPeerToPeerConnection();
     this.game.socketManager.setCurrentScene(null);
+    this.host = false;
+    this.mouseDown = false;
   }
   
   beginOnlineGame(startGameMessage) {
-    this.beginNewGame(startGameMessage);
+    var self = this;
+
+    // Only the host gets this message
+    // Start up the peer connection.
+    self.host = true;
+    self.opponentPeerId = startGameMessage.opponentPeerId;
+
+    self.connection = self.peer!.connect(self.opponentPeerId);
+    self.connection.on('data', (data) => {
+      self.handleRemoteData(data);
+    });
+    self.connection.on('open', () => {
+      // Setup and and start the match.
+      self.startMatch();
+    });
+
+    //this.startMatch();
   }
 
-  beginNewGame(startGameMessage) {
+  setPlayerNames(p1name, p2name) {
+    this.player1NameText.setText(p1name);
+    this.player2NameText.setText(p2name);
+  }
+
+  beginNewGame() {
     this.inputState = InputState.Playing;
-
-    this.side = startGameMessage.side;
-    this.previousWorldState = startGameMessage.worldState;
-    this.previousWorldStateTimestamp = Date.now();
-    this.latestWorldState = this.previousWorldState;
-    this.latestWorldStateTimestamp = this.previousWorldStateTimestamp;
-    this.lastInput = null;
+    this.waitingForPlayerText.setText('');
     this.changeWeapon(ShotType.Plain);
-
-    this.player1NameText.setText(startGameMessage.worldState.p1.name);
-    this.player2NameText.setText(startGameMessage.worldState.p2.name);
 
     this.spaceWasDown  = false;
     this.oneWasDown  = false;
     this.twoWasDown  = false;
+    this.pWasDown = false;
 
     // Cleanup previous state
     if (this.playerGraphic) {
@@ -271,9 +513,6 @@ export default class GameplayScene extends Phaser.Scene {
     }
     this.bulletGraphics = [];
 
-    this.spaceWasDown = false;
-    this.pWasDown = false;
-
     this.gameOverText.setText('');
 
     // Create player
@@ -285,7 +524,6 @@ export default class GameplayScene extends Phaser.Scene {
     );
 
     this.updateIndicators();
-
     this.updateCharacterPositionsFromSimulation();
   }
 
@@ -299,27 +537,38 @@ export default class GameplayScene extends Phaser.Scene {
 
   startGame(message) {
     //this.onlineInfoText.setText('Game started! Side: ' + message.side);
-    this.beginOnlineGame(message);
+    this.setPlayerNames(message.p1Name, message.p2Name);
+
+    if (message.host) {
+      this.beginOnlineGame(message);
+    }
   }
 
-  worldUpdate(worldState) {
-    this.processWorldUpdate(worldState);
+  opponentLeft(message) {
+    let opponent = this.getOpponentPlayer();
+    opponent.dead = true;
   }
-
 
   preload() {
   }
 
   update(time, delta) {
     this.accumulatedTime += delta;
-    if (this.accumulatedTime > TargetFrameTime) {
+    if (this.accumulatedTime > Constants.Timestep) {
 
       this.fpsText.update()
-      this.latencyText.setText('Latency: ' + this.game.socketManager.getLatency());
-      this.accumulatedTime -= TargetFrameTime;
+      let text = 'Latency: ' + this.game.socketManager.getLatency();
+      if (this.rollbackNetcode) {
+        text += '\r\nPing: ' + this.pingMeasure.average().toFixed(2) +
+        '\r\nStalling: ' + this.rollbackNetcode.shouldStall();
+      }
+      this.latencyText.setText(text);
+      this.accumulatedTime -= Constants.Timestep;
 
       if (this.inputState == InputState.Playing) {
-        this.handlePlayerInput();
+
+        //this.handlePlayerInput(timeIntoUpdate);
+
 
         // Update the health indicators
         this.updateIndicators();
@@ -332,12 +581,22 @@ export default class GameplayScene extends Phaser.Scene {
 
 
         this.checkGameoverState();
+
+        if (this.showRollbackDebugText && this.rollbackNetcode) {
+          this.rollbackDebugText.setText('Ping: ' + this.pingMeasure.average().toFixed(2) + 'ms\r\n' + 
+            'History Size: ' + this.rollbackNetcode.history.length + '\r\n' + 
+            'Frame Number: ' + this.rollbackNetcode.currentFrame() + '\r\n' + 
+            'Largest Future Size: ' + this.rollbackNetcode.largestFutureSize() + '\r\n' + 
+            'Predicated Frames: ' + this.rollbackNetcode.predictedFrames() + '\r\n' + 
+            'Stalling: ' + this.rollbackNetcode.shouldStall()
+          )
+        }
       }
     }
   }
 
   getMyPlayerGraphic() {
-    if (this.side == 1) {
+    if (this.myPlayerSide == Player1SideLeft) {
       return this.playerGraphic;
     }
     return this.enemyGraphic;
@@ -419,11 +678,11 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   updateIndicators() {
-    this.playerHealthIndicator.updateFillPercent(this.previousWorldState.p1.health / this.previousWorldState.p1.maxHealth);
-    this.enemyHealthIndicator.updateFillPercent(this.previousWorldState.p2.health / this.previousWorldState.p2.maxHealth);
+    this.playerHealthIndicator.updateFillPercent(this.gameState.Player1.health / this.gameState.Player1.maxHealth);
+    this.enemyHealthIndicator.updateFillPercent(this.gameState.Player2.health / this.gameState.Player2.maxHealth);
 
-    this.playerEnergyIndicator.updateFillPercent(this.previousWorldState.p1.energy / this.previousWorldState.p1.maxEnergy);
-    this.enemyEnergyIndicator.updateFillPercent(this.previousWorldState.p2.energy / this.previousWorldState.p2.maxEnergy);
+    this.playerEnergyIndicator.updateFillPercent(this.gameState.Player1.energy / this.gameState.Player1.maxEnergy);
+    this.enemyEnergyIndicator.updateFillPercent(this.gameState.Player2.energy / this.gameState.Player2.maxEnergy);
   }
 
   getWeaponString() {
@@ -437,101 +696,37 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   updateCharacterPositionsFromSimulation() {
+    this.playerGraphic.x = this.gameState.Player1.x + Constants.PlayAreaBufferX
+    this.playerGraphic.y = this.gameState.Player1.y + Constants.PlayAreaBufferY
 
-    this.interpolateCharacterPosition(this.previousWorldState.p1, this.latestWorldState.p1, this.playerGraphic);
-    this.interpolateCharacterPosition(this.previousWorldState.p2, this.latestWorldState.p2, this.enemyGraphic);
-
-  }
-
-  getElapsedTimeSincePreviousUpdate() {
-    return (Date.now() - this.previousWorldStateTimestamp) - Constants.ServerUpdateMs;
-  }
-
-  getPercentElapsedTime() {
-    let percent = this.getElapsedTimeSincePreviousUpdate() / Constants.ServerUpdateMs;
-    if (percent > 1) percent = 1;
-
-    return percent;
-  }
-
-  interpolateCharacterPosition(prevP1, latestP1, graphic) {
-    let x1 = prevP1.x;
-    let x2 = latestP1.x;
-    let y1 = prevP1.y;
-    let y2 = latestP1.y;
-
-    let percent = this.getPercentElapsedTime();
-
-    let x = ((x2 - x1) * percent) + x1;
-    let y = ((y2 - y1) * percent) + y1;
-
-    graphic.x = x + Constants.PlayAreaBufferX;
-    graphic.y = y + Constants.PlayAreaBufferY;
-  }
-
-  getLatestStateForBullet(prevSimBullet : SimBullet) {
-    for (var i = 0; i < this.latestWorldState.bullets.length; ++i) {
-      let latestBullet = this.latestWorldState.bullets[i];
-      if (prevSimBullet.id == latestBullet.id) {
-        return latestBullet;
-      }
-    }
-
-    return null;
+    this.enemyGraphic.x = this.gameState.Player2.x + Constants.PlayAreaBufferX
+    this.enemyGraphic.y = this.gameState.Player2.y + Constants.PlayAreaBufferY
   }
 
   updateBulletPositionsFromSimulation() {
 
-    let elapsedTimeSincePrevious = this.getElapsedTimeSincePreviousUpdate();
-
-    for (var i = 0; i < this.previousWorldState.bullets.length; ++i) {
+    for (var i = 0; i < this.gameState.Bullets.length; ++i) {
       // Find the corresponding graphical bullet and update it
       // If we didn't find it, create a new one.
-      let prevSimBullet = this.previousWorldState.bullets[i];
-      let latestSimBullet = this.getLatestStateForBullet(prevSimBullet);
+      let bullet = this.gameState.Bullets[i];
 
-      if (latestSimBullet == null) {
-        // Bullet disappears in next update.
-        // Handled in the other loop below.
-      } else {
-        let found = false;
+      let found = false;
 
-        let denominator = Constants.ServerUpdateMs;
-        let dead = (latestSimBullet.deadAtTime != null);
-        if (dead) {
-          denominator = latestSimBullet.deadAtTime;
+      for (var j = 0; j < this.bulletGraphics.length; ++j) {
+        let graphicalBullet = this.bulletGraphics[j];
+        if (bullet.id == graphicalBullet.id) {
+          found = true;
+          graphicalBullet.x = bullet.x + Constants.PlayAreaBufferX;
+          graphicalBullet.y = bullet.y + Constants.PlayAreaBufferY;
+          break;
         }
+      }
 
-        let percent = elapsedTimeSincePrevious / denominator;
-        if (percent > 1 && dead) {
-          // Delete bullet here.
-          for (var j = 0; j < this.bulletGraphics.length; ++j) {
-            let graphicalBullet = this.bulletGraphics[j];
-            if (prevSimBullet.id == graphicalBullet.id) {
-              graphicalBullet.destroy();
-              this.bulletGraphics.splice(j, 1);
-              break;
-            }
-          }
-        } else {
-          if (percent > 1) percent = 1;
-          for (var j = 0; j < this.bulletGraphics.length; ++j) {
-            let graphicalBullet = this.bulletGraphics[j];
-            if (prevSimBullet.id == graphicalBullet.id) {
-              // Update existing bullet
-              found = true;
-              graphicalBullet.interpolatePosition(prevSimBullet, latestSimBullet, percent);
-              break;
-            }
-          }
-
-          if (!found) {
-            // Create new bullet
-            let newGraphicalBullet = new BulletGraphic(this, prevSimBullet);
-            newGraphicalBullet.interpolatePosition(prevSimBullet, latestSimBullet, percent);
-            this.bulletGraphics.push(newGraphicalBullet);
-          }
-        }
+      if (!found) {
+        let newGraphicalBullet = new BulletGraphic(this, bullet);
+        newGraphicalBullet.x = bullet.x + Constants.PlayAreaBufferX;
+        newGraphicalBullet.y = bullet.y + Constants.PlayAreaBufferY;
+        this.bulletGraphics.push(newGraphicalBullet);
       }
     }
 
@@ -543,8 +738,8 @@ export default class GameplayScene extends Phaser.Scene {
     for (var j = this.bulletGraphics.length - 1; j >= 0; --j) {
       let graphicalBullet = this.bulletGraphics[j];
       let foundBullet = false;
-      for (var i = 0; i < this.latestWorldState.bullets.length; ++i) {
-        let simBullet = this.latestWorldState.bullets[i];
+      for (var i = 0; i < this.gameState.Bullets.length; ++i) {
+        let simBullet = this.gameState.Bullets[i];
         if (simBullet.id == graphicalBullet.id) {
           foundBullet = true;
           break;
@@ -558,112 +753,18 @@ export default class GameplayScene extends Phaser.Scene {
     }
   }
 
-  processWorldUpdate(worldState) {
-
-    this.lastInput = null;
-
-    this.previousWorldState = this.latestWorldState;
-    this.previousWorldStateTimestamp = this.latestWorldStateTimestamp;
-
-    this.latestWorldState = worldState;
-    this.latestWorldStateTimestamp = Date.now();
-
+  getMyPlayer() {
+    if (this.myPlayerSide == Player1SideLeft) {
+      return this.gameState.Player1;
+    }
+    return this.gameState.Player2;
   }
 
-  handlePlayerInput() {
-
-    let timeSinceUpdate = Date.now() - this.latestWorldStateTimestamp;
-    if (timeSinceUpdate < 0) timeSinceUpdate = 0;
-
-    let characterInput : CharacterInput = {
-      OwnerId: this.side,
-      TimeSinceServerUpdate: timeSinceUpdate,
-
-      VerticalMovement: 0,
-      HorizontalMovement: 0,
-      Shot: ShotType.None,
-      AimAngle: 0,
-    };
-
-    // Read joystick input
-    var cursorKeys = this.joystick.createCursorKeys();
-    if (cursorKeys['up'].isDown) {
-      characterInput.VerticalMovement = -1;
+  getOpponentPlayer() {
+    if (this.myPlayerSide == Player1SideLeft) {
+      return this.gameState.Player2;
     }
-    if (cursorKeys['right'].isDown) {
-      characterInput.HorizontalMovement = 1;
-    }
-    if (cursorKeys['left'].isDown) {
-      characterInput.HorizontalMovement = -1;
-    }
-    if (cursorKeys['down'].isDown) {
-      characterInput.VerticalMovement = 1;
-    }
-
-    // Movement
-    if (this.keys.W.isDown) {
-      characterInput.VerticalMovement = -1;
-    } else if (this.keys.S.isDown){
-      characterInput.VerticalMovement = 1;
-    }
-    
-    if (this.keys.A.isDown) {
-      characterInput.HorizontalMovement = -1;
-    } else if (this.keys.D.isDown){
-      characterInput.HorizontalMovement = 1;
-    }
-    
-    // Fire bullets
-    if (this.keys.SPACE.isDown) {
-      this.spaceWasDown = true;
-    } else if (this.keys.SPACE.isUp && this.spaceWasDown) {
-      characterInput.Shot = this.currentWeapon;
-      this.spaceWasDown = false;
-    }
-
-    if (this.mouseFire) {
-      characterInput.Shot = this.currentWeapon;
-      this.mouseFire = false;
-    }
-
-    // Change weapon
-    if (this.keys.ONE.isDown) {
-      this.oneWasDown = true;
-    } else if (this.keys.ONE.isUp && this.oneWasDown) {
-      this.changeWeapon(ShotType.Plain);
-      this.oneWasDown = false;
-    }
-
-    if (this.keys.TWO.isDown) {
-      this.twoWasDown = true;
-    } else if (this.keys.TWO.isUp && this.twoWasDown) {
-      this.changeWeapon(ShotType.BigSlow);
-      this.twoWasDown = false;
-    }
-
-    // Update angle based on the mouse line.
-    characterInput.AimAngle = this.mouseAimAngle;
-
-    // Check if input has changed since last frame.
-    let inputHasChanged = true;
-    if (this.lastInput) {
-      if (characterInput.HorizontalMovement == this.lastInput.HorizontalMovement &&
-        characterInput.VerticalMovement == this.lastInput.VerticalMovement &&
-        characterInput.Shot == this.lastInput.Shot
-        ) {
-        inputHasChanged = false;
-      }
-    }
-
-    if (characterInput.Shot != ShotType.None) {
-      inputHasChanged = true;
-    }
-
-    this.lastInput = characterInput;
-
-    if (inputHasChanged) {
-      this.game.socketManager.emit('sendinput', characterInput);
-    }
+    return this.gameState.Player1;
   }
 
   changeWeapon(newWeapon : number) {
@@ -692,8 +793,6 @@ export default class GameplayScene extends Phaser.Scene {
         button.setEnabled(true);
       }
     }
-
-    //this.weaponSelectionText.setText('Weapon: ' + this.getWeaponString());
   }
 
   debugInput() {
@@ -716,16 +815,21 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   checkGameoverState() {
-    if (this.latestWorldState.p1.dead || this.latestWorldState.p2.dead) {
-
-
-      if (this.latestWorldState.p1.dead && this.latestWorldState.p2.dead) {
+    if (this.gameState.Player1.dead || this.gameState.Player2.dead) {
+      if (this.gameState.Player1.dead && this.gameState.Player2.dead) {
         // Draw
         this.gameOverText.setText('Draw');
+        this.reportMatchResult(ReportResult.Draw);
       } else {
-          let youLose = (this.side == 1 && this.latestWorldState.p1.dead) ||
-                        (this.side == 2 && this.latestWorldState.p2.dead);
-          if (youLose) {
+        if (this.gameState.Player1.dead) {
+          this.reportMatchResult(ReportResult.P1Win);
+        } else {
+          this.reportMatchResult(ReportResult.P2Win);
+        }
+
+        let myPlayer = this.getMyPlayer();
+        let youLose = myPlayer.dead;
+        if (youLose) {
           this.gameOverText.setText('YOU LOSE');
         } else {
           this.gameOverText.setText('YOU WIN');
@@ -733,9 +837,17 @@ export default class GameplayScene extends Phaser.Scene {
       }
 
       this.inputState = InputState.GameOver;
+      this.exitPeerToPeerConnection();
     }
   }
+  
+  reportMatchResult(result) {
+    this.game.socketManager.emit('reportresult', {
+      Result: result,
+    });
+  }
 }
+
 
 // line intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
 // Determine the intersection point of two line segments

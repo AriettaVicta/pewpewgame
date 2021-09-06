@@ -17,6 +17,7 @@ export default class SocketManager {
     var self = this;
     this.playerName = '';
     this.playerList = [];
+    self.latency = 0;
 
     this.socket = io();
     this.socket.connect();
@@ -25,7 +26,7 @@ export default class SocketManager {
     // Scenes should implement:
     //  joinGameResponse
     //  startGame
-    //  worldUpdate
+    //  opponentLeft
     //
     this.socket.on("joingameresponse", (success) => {
       if (self.currentScene && self.currentScene.joinGameResponse) {
@@ -37,9 +38,9 @@ export default class SocketManager {
         self.currentScene.startGame(message);
       }
     });
-    this.socket.on('worldupdate', (worldState) => {
-      if (self.currentScene && self.currentScene.worldUpdate) {
-        self.currentScene.worldUpdate(worldState);
+    this.socket.on('opponentLeft', (message) => {
+      if (self.currentScene && self.currentScene.opponentLeft) {
+        self.currentScene.opponentLeft(message);
       }
     })
     this.socket.on('nameupdate', (newName) => {

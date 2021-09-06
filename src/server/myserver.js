@@ -1,5 +1,6 @@
 import { ServerPlayerState } from "../shared/enums.js";
 import GameRoom from "./gameroom.js";
+import PeerGameRoom from "./peergameroom.js";
 import Player from "./player.js";
 
 export default class MyServer {
@@ -14,7 +15,7 @@ export default class MyServer {
     this.io = io;
     this.players = [];
     this.gameRooms = [];
-    this.availableRoom = new GameRoom(io);
+    this.availableRoom = new PeerGameRoom(io);
 
     // Initialize socket IO handlers
     io.on('connection', (socket) => {
@@ -50,10 +51,10 @@ export default class MyServer {
         socket.emit('pong');
       });
 
-      socket.on('joingame', () => {
+      socket.on('joingame', (param) => {
         // Try to join the game
         // if full, send an error
-        var joined = self.availableRoom.joinRoom(this.getPlayerBySocket(socket.id));
+        var joined = self.availableRoom.joinRoom(this.getPlayerBySocket(socket.id), param.PeerId);
         if (joined) {
           console.log('joined game');
           socket.emit('joingameresponse', true);
@@ -67,10 +68,21 @@ export default class MyServer {
         // go ahead and add it to the list of rooms.
         if (!self.availableRoom.isWaitingForPlayers()) {
           self.gameRooms.push(self.availableRoom);
-          self.availableRoom = new GameRoom(io);
+          self.availableRoom = new PeerGameRoom(io);
         }
 
         self.broadcastPlayerList();
+      });
+
+      socket.on('reportresult', (message) => {
+        for (var i = self.gameRooms.length - 1; i >= 0; i--) {
+          let room = self.gameRooms[i];
+          room.reportResult(socket.id, message);
+          if (room.isGameFinished()) {
+            console.log('removing game room');
+            this.gameRooms.splice(i, 1);
+          }
+        }
       });
 
       socket.on('leavegame', () => {
@@ -162,7 +174,7 @@ export default class MyServer {
     this.availableRoom.leaveRoom(socketId);
     if (this.availableRoom.isGameFinished()) {
       console.log('create new gameroom');
-      this.availableRoom = new GameRoom(this.io);
+      this.availableRoom = new PeerGameRoom(this.io);
     }
     for (var i = this.gameRooms.length - 1; i >= 0; i--) {
       let room = this.gameRooms[i];

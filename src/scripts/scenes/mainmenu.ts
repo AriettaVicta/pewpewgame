@@ -9,6 +9,10 @@ export default class MainMenuScene extends Phaser.Scene {
   quickMatchButton : TextButton;
   howToPlayButton : TextButton;
 
+  peer1 : TextButton;
+  peer2 : TextButton;
+  peerMessage : TextButton;
+
   nameBox;
   changedNameTimer : number;
 
@@ -19,6 +23,7 @@ export default class MainMenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MainMenuScene' })
   }
+
 
   create() {
     var self = this;
@@ -70,13 +75,11 @@ export default class MainMenuScene extends Phaser.Scene {
       if (Date.now() - this.changedNameTimer > 1000) {
         this.changedNameTimer = 0;
         if (this.nameBox.node.value != '' && this.nameBox.node.value != this.game.socketManager.getPlayerName()) {
-          console.log('submit player name');
           this.game.socketManager.updatePlayerName(this.nameBox.node.value);
           //localStorage.setItem('playername', self.nameBox.node.value);
         }
       }
     }
-
   }
 
   nameUpdate(newName) {

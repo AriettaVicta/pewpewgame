@@ -2,8 +2,6 @@ import Simulation from "../shared/simulation.js";
 import Constants from "../shared/constants.js";
 import {ServerPlayerState} from '../shared/enums.js';
 
-const ServerStepMs = 2;
-
 const GAMESTATE_WAITINGFORPLAYERS = 1;
 const GAMESTATE_STARTED = 2;
 const GAMESTATE_GAMEOVER = 3;
@@ -25,11 +23,6 @@ export default class GameRoom {
 
     this.gameState = GAMESTATE_WAITINGFORPLAYERS;
     this.simulation = new Simulation();
-  }
-
-  reset() {
-    this.player1 = null;
-    this.player2 = null;
   }
 
   joinRoom(player) {
@@ -99,7 +92,7 @@ export default class GameRoom {
       //
       this.simulation.initialize(Constants.PlayAreaWidth, Constants.PlayAreaHeight, this.player1.name, this.player2.name);
       
-      let beginningWorldState = this.simulation.getWorldState();
+      let beginningWorldState = this.simulation.getLatestWorldState();
 
       if (this.timer) {
         clearInterval(this.timer);
@@ -149,30 +142,24 @@ export default class GameRoom {
 
     // Update the world at ServerStepMs.
     // Insert saved input based on client timestamp.
-    this.simulation.beforeRun();
-    for (var elapsedTime = 0; elapsedTime < Constants.ServerUpdateMs; elapsedTime += ServerStepMs) {
 
-      for (var i = this.unprocessedInput.length - 1; i >=0; --i) {
-        let input = this.unprocessedInput[i];
-        // Check if this input should be played back in this step.
-        if (input.TimeSinceServerUpdate <= elapsedTime + ServerStepMs) {
-          this.simulation.submitInput(input);
-          this.unprocessedInput.splice(i, 1);
-        }
-      }
 
-      this.simulation.update(elapsedTime, ServerStepMs);
-    }
+    ///
+    // Input will have a timestamp that indicates when it is supposed to be played
+    // Submit that input to that state.
+    // Start at the latest state and play all the input to get to the latest state
+    //
 
-    if (this.unprocessedInput.length > 0) {
-      for (var i = 0; i < this.unprocessedInput.length; i++) {
-        this.simulation.submitInput(this.unprocessedInput[i]);
+    for (var i = this.unprocessedInput.length - 1; i >=0; --i) {
+      let input = this.unprocessedInput[i];
+
+      if (this.simulation.submitInput(input)) {
+        this.unprocessedInput.splice(i, 1);
       }
     }
-    this.unprocessedInput = [];
 
-    // Delete removed bullets from the simulation.
-    this.simulation.deleteRemovedBullets();
+    // 
+    this.simulation.run();
 
     // If the game is over, kill the timer.
     if (this.simulation.isGameOver()) {
@@ -183,7 +170,7 @@ export default class GameRoom {
   }
 
   sendWorldUpdateToClients() {
-    let worldState = this.simulation.getWorldState();
+    let worldState = this.simulation.getLatestWorldState();
 
     // Send clients the update.
     this.io.to(this.player1.socketId).emit('worldupdate', worldState);

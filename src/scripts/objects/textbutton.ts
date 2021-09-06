@@ -60,13 +60,13 @@ export default class TextButton extends Phaser.GameObjects.Container {
         self.shape.setStrokeStyle(StrokeWidth, RectColorDefault);
         self.onClick();
       }
-      event.stopPropogation();
+      //event.stopPropogation();
     });
     this.on('pointerdown', (pointer, localX, localY, event) => {
       if (self.enabled) {
         self.shape.setStrokeStyle(StrokeWidth, RectColorDown);
       }
-      event.stopPropogation();
+      //event.stopPropogation();
     });
     this.on('pointerout', () => {
       if (self.enabled) {

@@ -16,23 +16,30 @@ Magic power bar - regenerates, used to shoot
 
 
 Following guide from https://www.gabrielgambetta.com/lag-compensation.html
+https://gabrielgambetta.com/client-side-prediction-live-demo.html
+
+P2P revision:
+  ☐ Minimize window stops updating javascript
+    ☐ Use Audio: https://stackoverflow.com/questions/6032429/chrome-timeouts-interval-suspended-in-background-tabs/51191818#51191818
+
 
 
 Misc:
   ☐ Save player name in localstorage
+  ☐ Segmented health bar
+  ☐ Switch weapons with scroll wheel
 
-Touch/Mouse cleanup:
-  ✔ Figure out how to capture the mouse/touch inputs so you don't shoot @done(21-08-07 17:33)
-    ✔ Like letting up on joystick or the weapon select buttons @done(21-08-07 17:33)
-  ✔ Update the aim mouse line on TouchDown event @done(21-08-07 17:39)
+Example scroll wheel
+  this.input.on('wheel', function (pointer, gameObjects, deltaX, deltaY, deltaZ) {
+        soil.tilePositionX += deltaX * 0.5;
+        soil.tilePositionY += deltaY * 0.5;
+    });
+
+Investigate dual stick controls:
+  ☐ Check out brawlstars
 
 Twitch:
   ☐ !website or !game commands
-
-Smoothness:
-  ☐ Client-side prediction
-    ☐ Run client movement locally
-    ☐ Server-side - play user inputs in the past based on elapsed time during that update.
 
 Lobby/Menu Private match:
     ☐ Choose room by entering a room code

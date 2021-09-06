@@ -20,7 +20,7 @@ ShotDefinitions[ShotType.Plain] = {
   Speed: 0.4,
   Radius: 5,
   Damage: 10,
-  EnergyReq: 5,
+  EnergyReq: 7,
   Color: 0xff6f00,
   MouseAim: false,
   ReloadSpeed: Constants.TargetFrameTime * 10,

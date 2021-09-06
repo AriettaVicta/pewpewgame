@@ -9,3 +9,10 @@ export const ServerPlayerState = {
   Searching: 2,
   Playing: 3,
 }
+
+export const ReportResult = {
+  None: 0,
+  Draw: 1,
+  P1Win: 2,
+  P2Win: 3,
+}

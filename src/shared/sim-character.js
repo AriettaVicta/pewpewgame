@@ -3,8 +3,10 @@ import { ShotType } from './enums.js';
 //import { CharacterInput } from '../interfaces.js';
 import ShotDefinitions from './shotdefs.js';
 
+import cloneDeep from 'lodash.clonedeep';
+
 const CharacterRadius = 10;
-const CharacterSpeedPerMs = 0.2;
+const CharacterSpeedPerMs = 0.5;
 
 export default class SimCharacter {
 
@@ -15,7 +17,6 @@ export default class SimCharacter {
   leftBound;
   rightBound;
   facingDirection;
-  fireBullet;
   id;
   name;
   health;
@@ -24,29 +25,51 @@ export default class SimCharacter {
   maxEnergy;
   dead;
   input;
+  bulletWaitingToShoot;
+  lastSequenceProcessed;
 
   lastShotTime;
 
-  constructor(id, name, x, y, facingDirection, leftBound, rightBound, fireBullet) {
+  constructor(id, name, x, y, facingDirection, leftBound, rightBound) {
 
-    this.x = x;
-    this.y = y;
-    this.radius = CharacterRadius;
-
+    // Permanent
     this.id = id;
     this.name = name;
     this.facingDirection = facingDirection;
     this.leftBound = leftBound;
     this.rightBound = rightBound;
-    this.fireBullet = fireBullet;
-    this.health = Constants.CharacterMaxHealth;
-    this.energy = Constants.CharacterStartingEnergy;
+    this.radius = CharacterRadius;
     this.maxHealth = Constants.CharacterMaxHealth;
     this.maxEnergy = Constants.CharacterMaxEnergy;
+
+    // State that changes and is copied
+    this.x = x;
+    this.y = y;
+
+    this.health = Constants.CharacterMaxHealth;
+    this.energy = Constants.CharacterStartingEnergy;
     this.dead = false;
     this.lastShotTime = [];
-
+    this.lastSequenceProcessed = 0;
     this.input = null;
+
+    // Bookkeeping
+    this.bulletWaitingToShoot = null;
+  }
+
+  copyState(other) {
+    this.x = other.x;
+    this.y = other.y;
+    this.health = other.health;
+    this.energy = other.energy;
+    this.dead = other.dead;
+    this.lastShotTime = cloneDeep(other.lastShotTime);
+    this.lastSequenceProcessed = other.lastSequenceProcessed;
+    this.input = cloneDeep(other.input);
+  }
+
+  setInput(input) {
+    this.input = input;
   }
 
   executeInput(delta) {
@@ -54,6 +77,7 @@ export default class SimCharacter {
       this.move(delta);
       this.shoot();
       this.input.Shot = ShotType.None;
+      this.lastSequenceProcessed = this.input.Sequence;
     }
   }
 
@@ -111,7 +135,13 @@ export default class SimCharacter {
         let bulletX = this.x + (this.radius * this.facingDirection);
         let bulletY = this.y;
 
-        this.fireBullet(this.id, bulletX, bulletY, input.Shot, angle);
+        this.bulletWaitingToShoot = {
+          id: this.id,
+          bulletX: bulletX,
+          bulletY: bulletY,
+          shot: input.Shot,
+          angle: angle,
+        }
         this.lastShotTime[input.Shot] = Date.now();
       }
     }
@@ -126,7 +156,7 @@ export default class SimCharacter {
   }
 
   regenEnergy(delta) {
-    this.energy += Constants.CharacterRegenEnergyAmountPerMs * delta;
+    this.energy += Constants.CharacterRegenEnergyAmountPerSecond * delta;
     this.energy = Math.round((this.energy + Number.EPSILON)* 100) / 100;
     if (this.energy > Constants.CharacterMaxEnergy) {
       this.energy = Constants.CharacterMaxEnergy;

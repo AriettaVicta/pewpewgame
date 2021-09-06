@@ -1,7 +1,8 @@
 export interface CharacterInput {
   // Meta
+  Sequence : number,
   OwnerId : number,
-  TimeSinceServerUpdate: number,
+  TimeOfEvent: number,
 
   // Input
   VerticalMovement : number,

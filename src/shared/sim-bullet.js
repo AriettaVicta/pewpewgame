@@ -23,12 +23,16 @@ export default class SimBullet {
     this.x = x;
     this.y = y;
     this.radius = ShotDefinitions[shotType].Radius;
-
     this.owner = owner;
     this.angle = angle;
     this.shotType = shotType;
     this.speed = ShotDefinitions[shotType].Speed;
+
     this.deadAtTime = null;
+  }
+
+  copyState(other) {
+    this.deadAtTime = other.deadAtTime;
   }
 
   update(delta) {

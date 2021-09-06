@@ -1,15 +1,22 @@
 export default {
 
+  Timestep: 1000 / 60,
+
+
+  CharacterRadius: 10,
+  CharacterSpeedPixelsPerFrame: 1.5,
+
   PlayAreaWidth: 1000,
   PlayAreaHeight: 600,
   PlayAreaBufferX: 150,
   PlayAreaBufferY: 100,
+  NoMansZoneWidth: 40,
 
   CharacterMaxHealth: 100,
 
   CharacterStartingEnergy: 50,
   CharacterMaxEnergy: 100,
-  CharacterRegenEnergyAmountPerMs: 0.01,
+  CharacterRegenEnergyAmountPerSecond: 3,
 
   ServerUpdateMs: 100,
 
