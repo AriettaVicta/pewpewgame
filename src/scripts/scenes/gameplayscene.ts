@@ -269,7 +269,7 @@ export default class GameplayScene extends Phaser.Scene {
     const hostInfo = {
       secure: true,
       port: 443,
-      host: 'victari-pewpew.herokuapp.com/',
+      host: 'victari-pewpew.herokuapp.com',
       path: '/peerjs'
     };
 
