@@ -15,7 +15,15 @@ import MyServer from './src/server/myserver.js';
 const myServer = new MyServer(io);
 
 import PeerServer from 'peer';
-const peerServer = PeerServer.PeerServer({ port: 9000, path: '/myapp' });
+//const peerServer = PeerServer.PeerServer({ port: 9000, path: '/myapp' });
+
+var options = {
+  debug: true,
+  allow_discovery: true,
+};
+let peerServer = PeerServer.ExpressPeerServer(server, options);
+app.use("/peerjs", peerServer);
+
 
 import { fileURLToPath } from 'url';
 

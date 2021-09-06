@@ -267,9 +267,10 @@ export default class GameplayScene extends Phaser.Scene {
     this.rollbackDebugText = this.add.text(700, 200, '');
 
     const hostInfo = {
-      host: '/',
-      port: 9000,
-      path: '/myapp'
+      secure: true,
+      port: 443,
+      host: 'victari-pewpew.herokuapp.com/',
+      path: '/peerjs'
     };
 
     self.peerId = uuidv4();
@@ -479,18 +480,22 @@ export default class GameplayScene extends Phaser.Scene {
     console.log('beginning peer connect');
 
     self.connection = self.peer!.connect(self.opponentPeerId);
-    self.connection.on('error', (error) => {
-      console.log('ERROR: ' + error);
-      console.error('ERROR: ' + error);
-    });
-    self.connection.on('data', (data) => {
-      self.handleRemoteData(data);
-    });
-    self.connection.on('open', () => {
-      // Setup and and start the match.
-      console.log('host open connection');
-      self.startMatch();
-    });
+    if (self.connection) {
+      self.connection.on('error', (error) => {
+        console.log('ERROR: ' + error);
+        console.error('ERROR: ' + error);
+      });
+      self.connection.on('data', (data) => {
+        self.handleRemoteData(data);
+      });
+      self.connection.on('open', () => {
+        // Setup and and start the match.
+        console.log('host open connection');
+        self.startMatch();
+      });
+    } else {
+      console.log('Peer.connect failed to make connection');
+    }
   }
 
   setPlayerNames(p1name, p2name) {
