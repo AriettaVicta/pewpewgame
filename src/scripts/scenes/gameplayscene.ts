@@ -278,12 +278,14 @@ export default class GameplayScene extends Phaser.Scene {
       console.error('ERROR: ' + error);
     });
     self.peer.on('connection', (conn) => {
+      console.log('new connection');
       self.connection = conn;
       self.connection.on('data', (data) => {
         self.handleRemoteData(data);
       });
       self.connection.on('open', () => {
         // Setup and and start the match.
+        console.log('startmatch on new connection open');
         self.startMatch();
       });
     });
@@ -474,16 +476,21 @@ export default class GameplayScene extends Phaser.Scene {
     self.host = true;
     self.opponentPeerId = startGameMessage.opponentPeerId;
 
+    console.log('beginning peer connect');
+
     self.connection = self.peer!.connect(self.opponentPeerId);
+    self.connection.on('error', (error) => {
+      console.log('ERROR: ' + error);
+      console.error('ERROR: ' + error);
+    });
     self.connection.on('data', (data) => {
       self.handleRemoteData(data);
     });
     self.connection.on('open', () => {
       // Setup and and start the match.
+      console.log('host open connection');
       self.startMatch();
     });
-
-    //this.startMatch();
   }
 
   setPlayerNames(p1name, p2name) {
@@ -545,8 +552,10 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   opponentLeft(message) {
-    let opponent = this.getOpponentPlayer();
-    opponent.dead = true;
+    if (this.gameState) {
+      let opponent = this.getOpponentPlayer();
+      opponent.dead = true;
+    }
   }
 
   preload() {
