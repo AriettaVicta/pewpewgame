@@ -266,12 +266,20 @@ export default class GameplayScene extends Phaser.Scene {
 
     this.rollbackDebugText = this.add.text(700, 200, '');
 
+    // This is the peer server deployed as a standalone app.
     const hostInfo = {
       secure: true,
       port: 443,
-      host: 'victari-pewpew.herokuapp.com',
-      path: '/peerjs'
+      host: 'victari-peer.herokuapp.com',
     };
+
+    // This works too on a single heroku app.
+    // const hostInfo = {
+    //   secure: true,
+    //   port: 443,
+    //   host: 'victari-pewpew.herokuapp.com',
+    //   path: '/peerjs'
+    // };
 
     self.peerId = uuidv4();
     self.peer = new Peer(self.peerId, hostInfo);
@@ -279,14 +287,12 @@ export default class GameplayScene extends Phaser.Scene {
       console.error('ERROR: ' + error);
     });
     self.peer.on('connection', (conn) => {
-      console.log('new connection');
       self.connection = conn;
       self.connection.on('data', (data) => {
         self.handleRemoteData(data);
       });
       self.connection.on('open', () => {
         // Setup and and start the match.
-        console.log('startmatch on new connection open');
         self.startMatch();
       });
     });
@@ -477,12 +483,9 @@ export default class GameplayScene extends Phaser.Scene {
     self.host = true;
     self.opponentPeerId = startGameMessage.opponentPeerId;
 
-    console.log('beginning peer connect');
-
     self.connection = self.peer!.connect(self.opponentPeerId);
     if (self.connection) {
       self.connection.on('error', (error) => {
-        console.log('ERROR: ' + error);
         console.error('ERROR: ' + error);
       });
       self.connection.on('data', (data) => {
@@ -490,11 +493,10 @@ export default class GameplayScene extends Phaser.Scene {
       });
       self.connection.on('open', () => {
         // Setup and and start the match.
-        console.log('host open connection');
         self.startMatch();
       });
     } else {
-      console.log('Peer.connect failed to make connection');
+      console.error('Peer.connect failed to make connection');
     }
   }
 
