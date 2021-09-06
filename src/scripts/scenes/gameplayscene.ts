@@ -284,19 +284,19 @@ export default class GameplayScene extends Phaser.Scene {
     this.rollbackDebugText = this.add.text(700, 200, '');
 
     // This is the peer server deployed as a standalone app.
-    const hostInfo = {
-      secure: true,
-      port: 443,
-      host: 'victari-peer.herokuapp.com',
-    };
-
-    // This works too on a single heroku app.
     // const hostInfo = {
     //   secure: true,
     //   port: 443,
-    //   host: 'victari-pewpew.herokuapp.com',
-    //   path: '/peerjs'
+    //   host: 'victari-peer.herokuapp.com',
     // };
+
+    // This runs peer on the main server.
+    const hostInfo = {
+      secure: true,
+      port: 443,
+      host: 'victari-pewpew.herokuapp.com',
+      path: '/peerjs'
+    };
 
     self.peerId = uuidv4();
     self.peer = new Peer(self.peerId, hostInfo);
