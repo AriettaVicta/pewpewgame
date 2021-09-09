@@ -19,6 +19,7 @@ import EWMASD from '../netcode/ewmasd';
 import { v4 as uuidv4 } from 'uuid';
 import { GameInput } from '../gamestate/types';
 import { GameState } from '../gamestate/gamestate';
+import SimpleAI from '../ai/simpleai';
 
 const PING_INTERVAL = 100;
 
@@ -89,6 +90,9 @@ export default class GameplayScene extends Phaser.Scene {
 
   joystick : VirtualJoyStick;
   joystickJustPressed : boolean;
+
+  vsAI : boolean;
+  aiPlayer : SimpleAI;
 
   // Peer stuff
   peer : Peer | null;
@@ -175,10 +179,18 @@ export default class GameplayScene extends Phaser.Scene {
 
     if (DEBUG_DELAY) {
       setTimeout(() => {
-        self.connection!.send(message);
+        self.sendMessageOverConnection(message);
       }, DEBUG_DELAY);
     } else {
-      self.connection!.send(message);
+      self.sendMessageOverConnection(message);
+    }
+  }
+
+  sendMessageOverConnection(message) {
+    if (this.vsAI) {
+      this.aiPlayer.onPeerMessage(message);
+    } else {
+      this.connection!.send(message);
     }
   }
 
@@ -212,34 +224,61 @@ export default class GameplayScene extends Phaser.Scene {
   getInput() : GameInput {
     let input = new GameInput();
 
-    // Read joystick input
-    if (this.joystick) {
-      var cursorKeys = this.joystick.createCursorKeys();
-      if (cursorKeys['up'].isDown) {
-        input.VerticalMovement = -1;
-      }
-      if (cursorKeys['right'].isDown) {
-        input.HorizontalMovement = 1;
-      }
-      if (cursorKeys['left'].isDown) {
-        input.HorizontalMovement = -1;
-      }
-      if (cursorKeys['down'].isDown) {
-        input.VerticalMovement = 1;
-      }
-    }
-
     // Movement
+    let movement = {
+      Vertical: 0,
+      Horizontal: 0,
+    }
     if (this.keys.W.isDown) {
-      input.VerticalMovement = -1;
+      movement.Vertical = -1;
     } else if (this.keys.S.isDown){
-      input.VerticalMovement = 1;
+      movement.Vertical = 1;
     }
 
     if (this.keys.A.isDown) {
-      input.HorizontalMovement = -1;
+      movement.Horizontal = -1;
     } else if (this.keys.D.isDown){
-      input.HorizontalMovement = 1;
+      movement.Horizontal = 1;
+    }
+
+    if (movement.Vertical != 0 || movement.Horizontal != 0) {
+      input.PercentSpeed = 1;
+      if (movement.Vertical == -1) {
+        if (movement.Horizontal == -1) { // 7
+          input.Angle = Math.PI + Math.PI/4;
+        } else if (movement.Horizontal == 0) { // 8
+          input.Angle = Math.PI + Math.PI / 2;
+        } else { // 9
+          input.Angle = Math.PI + Math.PI * 3 / 4;
+        }
+      } else if (movement.Vertical == 0) {
+        if (movement.Horizontal == -1) { // 4
+          input.Angle = Math.PI;
+        } else { // 6
+          input.Angle = 0;
+        }
+      } else if (movement.Vertical == 1) {
+        if (movement.Horizontal == -1) { // 1
+          input.Angle = Math.PI * 3 / 4;
+        } else if (movement.Horizontal == 0) { // 2
+          input.Angle = Math.PI / 2;
+        } else { // 3
+          input.Angle = Math.PI / 4;
+        }
+      }
+    } else {
+      input.PercentSpeed = 0;
+    }
+
+    // Read joystick input
+    if (this.joystick && movement.Vertical == 0 && movement.Horizontal == 0) {
+      //var cursorKeys = this.joystick.createCursorKeys();
+      
+      let degrees = (this.joystick.angle + 360) % 360;
+      let radians = degrees * Math.PI/180;
+      input.Angle = radians;
+
+      input.PercentSpeed = Math.min(this.joystick.force, 70) / 70;
     }
 
     // Fire bullets
@@ -281,7 +320,7 @@ export default class GameplayScene extends Phaser.Scene {
   create() {
     var self = this;
 
-    this.rollbackDebugText = this.add.text(700, 200, '');
+    this.vsAI = this.game.MatchStartOptions.vsAI;
 
     // This is the peer server deployed as a standalone app.
     // const hostInfo = {
@@ -313,6 +352,7 @@ export default class GameplayScene extends Phaser.Scene {
         self.startMatch();
       });
     });
+    this.rollbackDebugText = this.add.text(700, 200, '');
 
     this.input.addPointer(1);
 
@@ -464,10 +504,15 @@ export default class GameplayScene extends Phaser.Scene {
       self.onMouseUp(pointer, localX, localY, event);
     });
 
-    // Automatically join game
-    this.game.socketManager.emit('joingame', {
-        PeerId: self.peerId,
-    });
+    if (this.vsAI) {
+      this.aiPlayer = new SimpleAI(this);
+      this.startAIMatch();
+    } else {
+      // Automatically join game
+      this.game.socketManager.emit('joingame', {
+          PeerId: self.peerId,
+      });
+    }
   }
 
   returnToMainMenu() {
@@ -494,10 +539,14 @@ export default class GameplayScene extends Phaser.Scene {
   }
 
   cleanup() {
+    if (this.aiPlayer) {
+      this.aiPlayer.stop();
+    }
     this.exitPeerToPeerConnection();
     this.game.socketManager.setCurrentScene(null);
     this.host = false;
     this.mouseDown = false;
+    this.mouseFire = false;
   }
   
   beginOnlineGame(startGameMessage) {
@@ -523,6 +572,14 @@ export default class GameplayScene extends Phaser.Scene {
     } else {
       console.error('Peer.connect failed to make connection');
     }
+  }
+
+  startAIMatch() {
+    this.host = true;
+    this.connection = null;
+    this.startMatch();
+    this.aiPlayer.startMatch();
+    this.setPlayerNames(this.game.socketManager.getPlayerName(), 'AI Bot');
   }
 
   setPlayerNames(p1name, p2name) {
@@ -597,6 +654,10 @@ export default class GameplayScene extends Phaser.Scene {
   update(time, delta) {
     this.accumulatedTime += delta;
     if (this.accumulatedTime > Constants.Timestep) {
+
+      if (this.aiPlayer) {
+        this.aiPlayer.update();
+      }
 
       this.fpsText.update()
       let text = 'Latency: ' + this.game.socketManager.getLatency();
@@ -884,9 +945,13 @@ export default class GameplayScene extends Phaser.Scene {
   }
   
   reportMatchResult(result) {
-    this.game.socketManager.emit('reportresult', {
-      Result: result,
-    });
+    if (this.vsAI) {
+      this.aiPlayer.stop();
+    } else {
+      this.game.socketManager.emit('reportresult', {
+        Result: result,
+      });
+    }
   }
 }
 

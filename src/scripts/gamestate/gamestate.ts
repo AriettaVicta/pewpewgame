@@ -69,12 +69,8 @@ export class GameState extends NetplayState<GameInput> {
   }
 
   playerMove(player : PlayerState, input : GameInput) {
-    if (input.HorizontalMovement != 0) {
-      player.x += input.HorizontalMovement * Constants.CharacterSpeedPixelsPerFrame;
-    }
-    if (input.VerticalMovement != 0) {
-      player.y += input.VerticalMovement * Constants.CharacterSpeedPixelsPerFrame;
-    }
+    player.x += Math.cos(input.Angle) * input.PercentSpeed * Constants.CharacterSpeedPixelsPerFrame;
+    player.y += Math.sin(input.Angle) * input.PercentSpeed * Constants.CharacterSpeedPixelsPerFrame;
 
     // Respect boundaries
     let topBound = 0;

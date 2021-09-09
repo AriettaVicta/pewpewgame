@@ -22,8 +22,6 @@ P2P revision:
   ☐ Minimize window stops updating javascript
     ☐ Use Audio: https://stackoverflow.com/questions/6032429/chrome-timeouts-interval-suspended-in-background-tabs/51191818#51191818
 
-
-
 Misc:
   ☐ Save player name in localstorage
   ☐ Segmented health bar
@@ -92,6 +90,7 @@ Cool ideas:
   ☐ Slow down effect when more stuff is on screen
   ☐ Select loadout before matching up
     ☐ 3-4 weapons and an ability or two
+  ☐ Points or powerups for being close to no man's zone
   
 
 

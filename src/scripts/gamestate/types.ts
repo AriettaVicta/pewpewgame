@@ -6,14 +6,14 @@ import { ShotType } from '../../shared/enums';
 export class GameInput extends NetplayInput<GameInput> {
   constructor() {
     super();
-    this.VerticalMovement = 0;
-    this.HorizontalMovement = 0;
+    this.Angle = 0;
+    this.PercentSpeed = 0;
     this.Shot = ShotType.None;
     this.AimAngle = 0;
   }
 
-  VerticalMovement : number;
-  HorizontalMovement : number;
+  Angle: number;
+  PercentSpeed: number;
   Shot: number;
   AimAngle: number;
 }

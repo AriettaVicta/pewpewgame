@@ -8,6 +8,7 @@ export default class MainMenuScene extends Phaser.Scene {
 
   quickMatchButton : TextButton;
   howToPlayButton : TextButton;
+  vsAIButton : TextButton;
 
   peer1 : TextButton;
   peer2 : TextButton;
@@ -24,6 +25,12 @@ export default class MainMenuScene extends Phaser.Scene {
     super({ key: 'MainMenuScene' })
   }
 
+  beginGame(vsAI) {
+    this.game.MatchStartOptions = {
+      vsAI: vsAI,
+    };
+    this.scene.start('GameplayScene')
+  }
 
   create() {
     var self = this;
@@ -34,10 +41,13 @@ export default class MainMenuScene extends Phaser.Scene {
     self.game.socketManager.setCurrentScene(this);
 
     this.quickMatchButton = new TextButton(this, 200, 250, 'Quickmatch', () => {
-      self.scene.start('GameplayScene')
+      self.beginGame(false);
     }, false, null)
     this.howToPlayButton = new TextButton(this, 200, 400, 'How to Play', () => {
       self.scene.start('HowToPlayScene')
+    }, false, null)
+    this.vsAIButton = new TextButton(this, 600, 400, 'VS AI', () => {
+      self.beginGame(true);
     }, false, null)
 
     this.add.text(200, 100,
