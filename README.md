@@ -12,9 +12,9 @@ There's also Node server backend for matchmaking.
 Play now:
 https://victari-pewpew.herokuapp.com/
 
-Check out my streams on Twitch or my archives on Youtube.
-Twitch: https://www.twitch.tv/ariettavicta
-Youtube: https://www.youtube.com/channel/UCTR2cmAXx4eO3u8MI9yIlpw
+Check out my streams on Twitch or my archives on Youtube.<br>
+Twitch: https://www.twitch.tv/ariettavicta<br>
+Youtube: https://www.youtube.com/channel/UCTR2cmAXx4eO3u8MI9yIlpw<br>
 
 Follow me on Twitter for updates:
 https://twitter.com/AriettaVicta
