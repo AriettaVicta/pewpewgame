@@ -2,7 +2,11 @@ export const ShotType = {
   None: 1,
   Plain: 2,
   BigSlow: 3,
+  Multishot: 4,
+  DelayedShot: 5,
+  Turret: 6,
 }
+
 
 export const ServerPlayerState = {
   Lobby: 1,

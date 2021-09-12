@@ -74,6 +74,9 @@ export default class GameplayScene extends Phaser.Scene {
   nWasDown : boolean;
   oneWasDown: boolean;
   twoWasDown : boolean;
+  threeWasDown : boolean;
+  fourWasDown : boolean;
+  fiveWasDown : boolean;
   mouseDown : boolean;
   mouseFire : boolean;
   bulletGraphics : BulletGraphic[];
@@ -309,6 +312,27 @@ export default class GameplayScene extends Phaser.Scene {
       this.twoWasDown = false;
     }
 
+    if (this.keys.THREE.isDown) {
+      this.threeWasDown = true;
+    } else if (this.keys.THREE.isUp && this.threeWasDown) {
+      this.changeWeapon(ShotType.Multishot);
+      this.threeWasDown = false;
+    }
+
+    if (this.keys.FOUR.isDown) {
+      this.fourWasDown = true;
+    } else if (this.keys.FOUR.isUp && this.fourWasDown) {
+      this.changeWeapon(ShotType.DelayedShot);
+      this.fourWasDown = false;
+    }
+
+    if (this.keys.FIVE.isDown) {
+      this.fiveWasDown = true;
+    } else if (this.keys.FIVE.isUp && this.fiveWasDown) {
+      this.changeWeapon(ShotType.Turret);
+      this.fiveWasDown = false;
+    }
+
     // Update angle based on the mouse line.
     input.AimAngle = this.mouseAimAngle;
 
@@ -429,7 +453,7 @@ export default class GameplayScene extends Phaser.Scene {
     this.gameOverText.setDepth(Depth_UI);
 
     this.leaveGameButton = new TextButton(this, 
-      Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 20, Constants.PlayAreaBufferY +Constants.PlayAreaHeight - 50,
+      Constants.PlayAreaBufferX + Constants.PlayAreaWidth - 120, Constants.PlayAreaBufferY + Constants.PlayAreaHeight + 50,
       'Quit', () => {
       self.returnToMainMenu();
     }, false, null);
@@ -440,7 +464,7 @@ export default class GameplayScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     let weaponYOffset = 150;
     this.weaponSelectbuttons = [];
-    for (var i = ShotType.Plain; i <= ShotType.BigSlow; i++) {
+    for (var i = ShotType.Plain; i <= ShotType.Turret; i++) {
       let weapon = new TextButton(this, 
         Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 85, Constants.PlayAreaBufferY + 125 + weaponYOffset * (i - ShotType.Plain),
         '' + (i - 1), 
@@ -462,7 +486,7 @@ export default class GameplayScene extends Phaser.Scene {
     this.noMansZone.setStrokeStyle(3, NoMansZoneColor, 1.0);
     this.noMansZone.setOrigin(0, 0);
 
-    this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE,TWO', false);
+    this.keys = this.input.keyboard.addKeys('W,S,A,D,SPACE,I,J,K,L,P,M,N,ONE,TWO,THREE,FOUR,FIVE', false);
 
     let player1InfoX = Constants.PlayAreaBufferX;
     let player2InfoX = Constants.PlayAreaBufferX + Constants.PlayAreaWidth/2;
@@ -596,6 +620,9 @@ export default class GameplayScene extends Phaser.Scene {
     this.spaceWasDown  = false;
     this.oneWasDown  = false;
     this.twoWasDown  = false;
+    this.threeWasDown = false;
+    this.fourWasDown = false;
+    this.fiveWasDown = false;
     this.pWasDown = false;
 
     // Cleanup previous state
@@ -788,16 +815,6 @@ export default class GameplayScene extends Phaser.Scene {
     this.enemyEnergyIndicator.updateFillPercent(this.gameState.Player2.energy / this.gameState.Player2.maxEnergy);
   }
 
-  getWeaponString() {
-    if (this.currentWeapon == ShotType.Plain) {
-      return 'Default';
-    } else if (this.currentWeapon == ShotType.BigSlow) {
-      return 'SlowShot';
-    } else {
-      return '???';
-    }
-  }
-
   updateCharacterPositionsFromSimulation() {
     this.playerGraphic.x = this.gameState.Player1.x + Constants.PlayAreaBufferX
     this.playerGraphic.y = this.gameState.Player1.y + Constants.PlayAreaBufferY
@@ -881,12 +898,7 @@ export default class GameplayScene extends Phaser.Scene {
     // Update the button so it looks highlighted.
     for (var i = 0; i < this.weaponSelectbuttons.length; i++) {
       let button = this.weaponSelectbuttons[i];
-      let shotType = ShotType.None;
-      if (i == 0) {
-        shotType = ShotType.Plain;
-      } else {
-        shotType = ShotType.BigSlow;
-      }
+      let shotType = ShotType.Plain + i;
 
       if (shotType == newWeapon) {
         // This button is the selected weapon.

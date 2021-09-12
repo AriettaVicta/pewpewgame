@@ -67,6 +67,15 @@ export class BulletState {
 
     this.radius = ShotDefinitions[shotType].Radius;
     this.speed = ShotDefinitions[shotType].Speed;
+
+    if (shotType == ShotType.DelayedShot) {
+      this.delayTime = ShotDefinitions[shotType].DelayTimeMs;
+      this.calculatedAngle = false;
+    } else if (shotType == ShotType.Turret) {
+      this.turretDelayRemainingMs = ShotDefinitions[shotType].DelayBetweenShotMs;
+      this.turretProjectilesRemaining = ShotDefinitions[shotType].NumProjectiles;
+      this.turretProjectile = ShotDefinitions[shotType].TurretProjectile;
+    }
   }
 
   id : number;
@@ -79,4 +88,13 @@ export class BulletState {
   x : number;
   y : number;
   radius : number;
+
+  // DelayedShot
+  delayTime : number;
+  calculatedAngle: boolean;
+
+  // Turret
+  turretDelayRemainingMs : number;
+  turretProjectilesRemaining : number;
+  turretProjectile : number;
 }

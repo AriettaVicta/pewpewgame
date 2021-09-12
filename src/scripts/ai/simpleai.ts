@@ -141,17 +141,13 @@ export default class SimpleAI {
       input.PercentSpeed = 1;
     }
 
-
-    // let dodgingBullets = (input.PercentSpeed != 0);
-    // if (!dodgingBullets) {
-    //   this.trackPlayer(me, you, input);
-    // }
-    // let targetX = (Constants.PlayAreaWidth) / 2 + (Constants.PlayAreaWidth / 8)
-    // if (!dodgingBullets && me.x > targetX) {
-    //   input.HorizontalMovement = -1;
-    // }
-
     // Shoot
+    this.handleShooting(me, you, input);
+
+    return input;
+  }
+
+  handleShooting(me : PlayerState, you : PlayerState, input : GameInput) {
     if (this.shootBehavior == ShootBehavior.Attack) {
       let minDist = 10;
       if (this.seekBehavior == SeekBehavior.Player) {
@@ -160,11 +156,18 @@ export default class SimpleAI {
       if (Math.abs(me.y - you.y) < minDist) {
         input.Shot = ShotType.Plain;
       }
+
       if (input.Shot == ShotType.None) {
-        input.Shot = ShotType.BigSlow
-        let angleToYou = Math.atan2(you.y - me.y, you.x - me.x)
-        let drift = ((Math.random() * 20)-10) * Math.PI / 180;
-        input.AimAngle = angleToYou + drift;
+        let leftBound = Constants.PlayAreaWidth / 2 + Constants.NoMansZoneWidth / 2;
+        let halfway = (Constants.PlayAreaWidth - leftBound) / 2;
+        if (me.x > leftBound + halfway && me.energy > 50) {
+          input.Shot = ShotType.Multishot;
+        } else {
+          input.Shot = ShotType.BigSlow;
+          let angleToYou = Math.atan2(you.y - me.y, you.x - me.x)
+          let drift = ((Math.random() * 20)-10) * Math.PI / 180;
+          input.AimAngle = angleToYou + drift;
+        }
 
       }
 
@@ -176,8 +179,6 @@ export default class SimpleAI {
         this.shootBehavior = ShootBehavior.Attack;
       }
     }
-
-    return input;
   }
 
   getSeekBehaviorForce(me : PlayerState, you : PlayerState) : Vector {

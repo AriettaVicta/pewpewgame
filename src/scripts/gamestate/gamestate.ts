@@ -100,38 +100,99 @@ export class GameState extends NetplayState<GameInput> {
         player.energy -= energyNeeded;
 
         // Create the bullet.
-        let angle = (player.facingDirection == 1) ? 0 : Math.PI;
-        if (ShotDefinitions[input.Shot].MouseAim) {
-          angle = input.AimAngle;
+        if (input.Shot == ShotType.Multishot) {
+          this.shootMultishotBullet(player);
+        } else if (input.Shot == ShotType.DelayedShot) {
+          let angle = (player.facingDirection == 1) ? 0 : Math.PI;
+
+          // Adjust the x value based on which direction we're firing.
+          let bulletX = player.x + (player.radius * player.facingDirection);
+          let bulletY = player.y;
+
+          let newBullet = new BulletState(
+            this.NextBulletId++,
+            player.id,
+            angle,
+            input.Shot,
+            bulletX,
+            bulletY
+          );
+          
+          this.Bullets.push(newBullet);
+        } else {
+          let angle = (player.facingDirection == 1) ? 0 : Math.PI;
+          if (ShotDefinitions[input.Shot].MouseAim) {
+            angle = input.AimAngle;
+          }
+
+          // Adjust the x value based on which direction we're firing.
+          let bulletX = player.x + (player.radius * player.facingDirection);
+          let bulletY = player.y;
+
+          let newBullet = new BulletState(
+            this.NextBulletId++,
+            player.id,
+            angle,
+            input.Shot,
+            bulletX,
+            bulletY
+          );
+          
+          this.Bullets.push(newBullet);
         }
-        // if (input.Shot == ShotType.BigSlow) {
-        //   // Adjust the angle based on the VerticalMovement of the character.
-        //   let addAngle = input.VerticalMovement * this.facingDirection;
-        //   if (addAngle > 0) {
-        //     angle += (10 * Math.PI / 180);
-        //   } else if (addAngle < 0) {
-        //     angle -= (10 * Math.PI / 180);
-        //   }
-        // }
-
-        // Adjust the x value based on which direction we're firing.
-        let bulletX = player.x + (player.radius * player.facingDirection);
-        let bulletY = player.y;
-
-        let newBullet = new BulletState(
-          this.NextBulletId++,
-          player.id,
-          angle,
-          input.Shot,
-          bulletX,
-          bulletY
-        );
-        
-        this.Bullets.push(newBullet);
         player.lastShotTime[input.Shot] = Date.now();
       }
     }
   }
+
+  shootMultishotBullet(player : PlayerState) {
+    let shotType = ShotType.Multishot;
+
+    // Adjust the x value based on which direction we're firing.
+    let bulletX = player.x + (player.radius * player.facingDirection);
+    let bulletY = player.y;
+
+    //
+    // Create 2 bullets at a time using the spread.
+    //
+    let spreadAngle = ShotDefinitions[shotType].SpreadAngle;
+    let facingAngle = (player.facingDirection == 1) ? 0 : Math.PI;
+    let currentAngleOffset = spreadAngle;
+    for (let i = 0; i < ShotDefinitions[shotType].NumProjectiles; i+=2) {
+
+      let newBullet = new BulletState(
+        this.NextBulletId++,
+        player.id,
+        facingAngle + currentAngleOffset,
+        shotType,
+        bulletX,
+        bulletY
+      );
+      this.Bullets.push(newBullet);
+      newBullet = new BulletState(
+        this.NextBulletId++,
+        player.id,
+        facingAngle - currentAngleOffset,
+        shotType,
+        bulletX,
+        bulletY
+      );
+      this.Bullets.push(newBullet);
+
+      currentAngleOffset += spreadAngle 
+    }
+    let newBullet = new BulletState(
+      this.NextBulletId++,
+      player.id,
+      facingAngle,
+      shotType,
+      bulletX,
+      bulletY
+    );
+    this.Bullets.push(newBullet);
+  }
+
+  
 
   updateEnergy() {
     this.regenEnergyForPlayer(this.Player1);
@@ -152,8 +213,60 @@ export class GameState extends NetplayState<GameInput> {
     for (var i = this.Bullets.length - 1; i >= 0 ; --i) {
       let bullet = this.Bullets[i];
       
-      bullet.x = bullet.x + Math.cos(bullet.angle) * (bullet.speed / Constants.Timestep);
-      bullet.y = bullet.y + Math.sin(bullet.angle) * (bullet.speed / Constants.Timestep);
+      let holdPosition = false;
+      if (bullet.shotType == ShotType.DelayedShot) {
+        bullet.delayTime -= Constants.Timestep;
+        if (bullet.delayTime > 0) {
+          holdPosition = true;
+        } else {
+          if (!bullet.calculatedAngle) {
+            // Recalculate the angle to aim at where the player is now.
+            let you = this.Player1;
+            if (bullet.owner == this.Player1.id) {
+              you = this.Player2;
+            }
+            bullet.angle = Math.atan2(you.y - bullet.y, you.x - bullet.x);
+            bullet.calculatedAngle = true;
+          }
+        }
+      } else if (bullet.shotType == ShotType.Turret) {
+        holdPosition = true;
+        bullet.turretDelayRemainingMs -= Constants.Timestep;
+        if (bullet.turretDelayRemainingMs < 0) {
+          // Shoot one of our bullets.
+          let bulletTypeToShoot = bullet.turretProjectile;
+          // Recalculate the angle to aim at where the player is now.
+          let you = this.Player1;
+          let me = this.Player2;
+          if (bullet.owner == this.Player1.id) {
+            you = this.Player2;
+            me = this.Player1;
+          }
+          let angle = Math.atan2(you.y - bullet.y, you.x - bullet.x);
+
+          let newBullet = new BulletState(
+            this.NextBulletId++,
+            me.id,
+            angle,
+            bulletTypeToShoot,
+            bullet.x,
+            bullet.y
+          );
+          this.Bullets.push(newBullet);
+
+          bullet.turretDelayRemainingMs = ShotDefinitions[bullet.shotType].DelayBetweenShotMs
+          bullet.turretProjectilesRemaining--;
+          if (bullet.turretProjectilesRemaining == 0) {
+            // Destroy the bullet.
+            this.Bullets.splice(i, 1);
+          }
+        }
+      }
+
+      if (!holdPosition) {
+        bullet.x = bullet.x + Math.cos(bullet.angle) * (bullet.speed / Constants.Timestep);
+        bullet.y = bullet.y + Math.sin(bullet.angle) * (bullet.speed / Constants.Timestep);
+      }
 
       // Check for collisions between players
       let checkCollisionWithPlayer : PlayerState | null = null;

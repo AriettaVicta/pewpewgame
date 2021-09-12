@@ -35,9 +35,6 @@ Example scroll wheel
 
 Lobby/Menu Private match:
     ☐ Choose room by entering a room code
-
-Balance:
-  ☐ Lower player move speed?
   
 Controller Input:
   ☐ Analog sticks
@@ -51,6 +48,12 @@ Sound Effects:
   ☐ Shooting
   ☐ Hit
   ☐ Exploding
+
+Weapons to test out:
+  ☐ 3-4 way shot slow projectile
+  ☐ Delay missle/shot
+  ☐ Turret type thing (lasts X seconds)
+
 
 
 Weapon Ideas:
