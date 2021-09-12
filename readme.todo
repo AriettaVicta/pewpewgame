@@ -14,9 +14,16 @@ Types of shots/abilities
 Health bar
 Magic power bar - regenerates, used to shoot
 
+Testing notes:
+  ☐ Energy should recharge faster
+  ☐ Tricker bullets would be interesting
+    ☐ Change direction
+    ☐ Don't move in straight lines
+  ☐ Player moves kind of slow, but so do bullets
 
-Following guide from https://www.gabrielgambetta.com/lag-compensation.html
-https://gabrielgambetta.com/client-side-prediction-live-demo.html
+
+
+
 
 P2P revision:
   ☐ Minimize window stops updating javascript

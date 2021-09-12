@@ -528,6 +528,24 @@ export default class GameplayScene extends Phaser.Scene {
       self.onMouseUp(pointer, localX, localY, event);
     });
 
+    // TODO: Check recommended scroll usage
+    // this.input.on('wheel', function (pointer, gameObjects, deltaX, deltaY, deltaZ) {
+    //   console.log('delta: ' + deltaY);
+    //   if (deltaY > 0) {
+    //     let newWeapon = self.currentWeapon + 1;
+    //     if (newWeapon > ShotType.Turret) {
+    //       newWeapon = ShotType.Plain;
+    //     }
+    //     self.changeWeapon(newWeapon);
+    //   } else if (deltaY < 0) {
+    //     let newWeapon = self.currentWeapon - 1;
+    //     if (newWeapon <= ShotType.None) {
+    //       newWeapon = ShotType.Turret;
+    //     }
+    //     self.changeWeapon(newWeapon);
+    //   }
+    // });
+
     if (this.vsAI) {
       this.aiPlayer = new SimpleAI(this);
       this.startAIMatch();
