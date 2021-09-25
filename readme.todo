@@ -14,6 +14,18 @@ Types of shots/abilities
 Health bar
 Magic power bar - regenerates, used to shoot
 
+New ideas:
+  ✔ Change single bullet to a V shaped spray @done(21-09-25 16:42)
+  ✔ Change slow bullet to 3 in a line that move at different speeds @done(21-09-25 16:11)
+    ✔ Turret shoots these and shoots more/faster @done(21-09-25 16:18)
+  ✔ Aim spread shot @done(21-09-25 16:24)
+
+Objectives to encourage movement:
+  ☐ Collect dots for points
+  ☐ Points for being close to middle
+  ☐ Should the player respawn instead of having lots of health?
+
+
 Testing notes:
   ☐ Energy should recharge faster
   ☐ Tricker bullets would be interesting
@@ -22,6 +34,9 @@ Testing notes:
   ☐ Player moves kind of slow, but so do bullets
 
 
+Improve weapon UI:
+  ☐ Indicators for energy use, reload speed
+  ☐ Pictures for weapons
 
 
 
@@ -34,11 +49,6 @@ Misc:
   ☐ Segmented health bar
   ☐ Switch weapons with scroll wheel
 
-Example scroll wheel
-  this.input.on('wheel', function (pointer, gameObjects, deltaX, deltaY, deltaZ) {
-        soil.tilePositionX += deltaX * 0.5;
-        soil.tilePositionY += deltaY * 0.5;
-    });
 
 Lobby/Menu Private match:
     ☐ Choose room by entering a room code
@@ -55,11 +65,6 @@ Sound Effects:
   ☐ Shooting
   ☐ Hit
   ☐ Exploding
-
-Weapons to test out:
-  ☐ 3-4 way shot slow projectile
-  ☐ Delay missle/shot
-  ☐ Turret type thing (lasts X seconds)
 
 
 

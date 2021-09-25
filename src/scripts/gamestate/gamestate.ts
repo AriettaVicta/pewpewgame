@@ -100,8 +100,8 @@ export class GameState extends NetplayState<GameInput> {
         player.energy -= energyNeeded;
 
         // Create the bullet.
-        if (input.Shot == ShotType.Multishot) {
-          this.shootMultishotBullet(player);
+        if (input.Shot == ShotType.SpreadShot) {
+          this.shootSpreadShotBullet(player, input.AimAngle);
         } else if (input.Shot == ShotType.DelayedShot) {
           let angle = (player.facingDirection == 1) ? 0 : Math.PI;
 
@@ -119,6 +119,18 @@ export class GameState extends NetplayState<GameInput> {
           );
           
           this.Bullets.push(newBullet);
+        } else if (input.Shot == ShotType.BigSlow) {
+
+          this.shootSlowShot(player.x, player.y, player.radius, player.facingDirection, player.id, input.AimAngle);
+
+        } else if (input.Shot == ShotType.VShot) {
+
+          let angle = (player.facingDirection == 1) ? 0 : Math.PI;
+          if (ShotDefinitions[input.Shot].MouseAim) {
+            angle = input.AimAngle;
+          }
+          this.shootVShot(player.x, player.y, player.radius, player.facingDirection, player.id, angle);
+
         } else {
           let angle = (player.facingDirection == 1) ? 0 : Math.PI;
           if (ShotDefinitions[input.Shot].MouseAim) {
@@ -140,13 +152,14 @@ export class GameState extends NetplayState<GameInput> {
           
           this.Bullets.push(newBullet);
         }
+
         player.lastShotTime[input.Shot] = Date.now();
       }
     }
   }
 
-  shootMultishotBullet(player : PlayerState) {
-    let shotType = ShotType.Multishot;
+  shootSpreadShotBullet(player : PlayerState, aimAngle) {
+    let shotType = ShotType.SpreadShot;
 
     // Adjust the x value based on which direction we're firing.
     let bulletX = player.x + (player.radius * player.facingDirection);
@@ -157,6 +170,9 @@ export class GameState extends NetplayState<GameInput> {
     //
     let spreadAngle = ShotDefinitions[shotType].SpreadAngle;
     let facingAngle = (player.facingDirection == 1) ? 0 : Math.PI;
+    if (ShotDefinitions[ShotType.SpreadShot].MouseAim) {
+      facingAngle = aimAngle;
+    }
     let currentAngleOffset = spreadAngle;
     for (let i = 0; i < ShotDefinitions[shotType].NumProjectiles; i+=2) {
 
@@ -192,6 +208,96 @@ export class GameState extends NetplayState<GameInput> {
     this.Bullets.push(newBullet);
   }
 
+  shootSlowShot(startX, startY, startRadius, startFacingDirection, id, aimAngle) {
+    let speedOffset = -4;
+    for (let i = 0; i < ShotDefinitions[ShotType.BigSlow].NumShots; i++) {
+      let angle = (startFacingDirection == 1) ? 0 : Math.PI;
+      if (ShotDefinitions[ShotType.BigSlow].MouseAim) {
+        angle = aimAngle;
+      }
+
+      // Adjust the x value based on which direction we're firing.
+      let bulletX = startX + (startRadius * startFacingDirection);
+      let bulletY = startY;
+
+      let newBullet = new BulletState(
+        this.NextBulletId++,
+        id,
+        angle,
+        ShotType.BigSlow,
+        bulletX,
+        bulletY
+      );
+
+      newBullet.speed += speedOffset;
+      speedOffset += 4;
+      
+      this.Bullets.push(newBullet);
+    }
+  }
+
+  shootVShot(startX, startY, startRadius, startFacingDirection, id, aimAngle) {
+
+
+    // 
+    // Shoot the middle shot first,
+    // then shoot the outer shots 2 at a time moving the offset.
+    //
+
+    // Adjust the x value based on which direction we're firing.
+    let firstBulletX = startX + (startRadius * startFacingDirection);
+    let firstBulletY = startY;
+
+    let newBullet = new BulletState(
+      this.NextBulletId++,
+      id,
+      aimAngle,
+      ShotType.VShot,
+      firstBulletX,
+      firstBulletY
+    );
+    
+    this.Bullets.push(newBullet);
+
+    let spreadX = ShotDefinitions[ShotType.VShot].SpreadX;
+    let spreadY = ShotDefinitions[ShotType.VShot].SpreadY;
+    let xOffset = spreadX * startFacingDirection;
+    let yOffset = spreadY;
+    for (let i = 0; i < ShotDefinitions[ShotType.VShot].NumExtraShots; i+=2) {
+
+      // Fire 2 bullets, one with +yoffset and one with -yoffset
+      let bullet1X = firstBulletX - xOffset;
+      let bullet1Y = firstBulletY + yOffset;
+
+      let newBullet = new BulletState(
+        this.NextBulletId++,
+        id,
+        aimAngle,
+        ShotType.VShot,
+        bullet1X,
+        bullet1Y
+      );
+      
+      this.Bullets.push(newBullet);
+
+      let bullet2X = firstBulletX - xOffset;
+      let bullet2Y = firstBulletY - yOffset;
+
+      let newBullet2 = new BulletState(
+        this.NextBulletId++,
+        id,
+        aimAngle,
+        ShotType.VShot,
+        bullet2X,
+        bullet2Y
+      );
+      
+      this.Bullets.push(newBullet2);
+
+      xOffset += (spreadX * startFacingDirection);
+      yOffset += spreadY;
+    }
+  }
   
 
   updateEnergy() {
@@ -244,15 +350,19 @@ export class GameState extends NetplayState<GameInput> {
           }
           let angle = Math.atan2(you.y - bullet.y, you.x - bullet.x);
 
-          let newBullet = new BulletState(
-            this.NextBulletId++,
-            me.id,
-            angle,
-            bulletTypeToShoot,
-            bullet.x,
-            bullet.y
-          );
-          this.Bullets.push(newBullet);
+          if (bulletTypeToShoot == ShotType.BigSlow) {
+            this.shootSlowShot(bullet.x, bullet.y, bullet.radius, me.facingDirection, me.id, angle);
+          }
+
+          // let newBullet = new BulletState(
+          //   this.NextBulletId++,
+          //   me.id,
+          //   angle,
+          //   bulletTypeToShoot,
+          //   bullet.x,
+          //   bullet.y
+          // );
+          // this.Bullets.push(newBullet);
 
           bullet.turretDelayRemainingMs = ShotDefinitions[bullet.shotType].DelayBetweenShotMs
           bullet.turretProjectilesRemaining--;

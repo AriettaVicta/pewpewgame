@@ -301,7 +301,7 @@ export default class GameplayScene extends Phaser.Scene {
     if (this.keys.ONE.isDown) {
       this.oneWasDown = true;
     } else if (this.keys.ONE.isUp && this.oneWasDown) {
-      this.changeWeapon(ShotType.Plain);
+      this.changeWeapon(ShotType.VShot);
       this.oneWasDown = false;
     }
 
@@ -315,7 +315,7 @@ export default class GameplayScene extends Phaser.Scene {
     if (this.keys.THREE.isDown) {
       this.threeWasDown = true;
     } else if (this.keys.THREE.isUp && this.threeWasDown) {
-      this.changeWeapon(ShotType.Multishot);
+      this.changeWeapon(ShotType.SpreadShot);
       this.threeWasDown = false;
     }
 
@@ -464,9 +464,9 @@ export default class GameplayScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     let weaponYOffset = 150;
     this.weaponSelectbuttons = [];
-    for (var i = ShotType.Plain; i <= ShotType.Turret; i++) {
+    for (var i = ShotType.VShot; i <= ShotType.Turret; i++) {
       let weapon = new TextButton(this, 
-        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 85, Constants.PlayAreaBufferY + 125 + weaponYOffset * (i - ShotType.Plain),
+        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 85, Constants.PlayAreaBufferY + 125 + weaponYOffset * (i - ShotType.VShot),
         '' + (i - 1), 
         (param) => {
           self.changeWeapon(param);
@@ -534,7 +534,7 @@ export default class GameplayScene extends Phaser.Scene {
     //   if (deltaY > 0) {
     //     let newWeapon = self.currentWeapon + 1;
     //     if (newWeapon > ShotType.Turret) {
-    //       newWeapon = ShotType.Plain;
+    //       newWeapon = ShotType.VShot;
     //     }
     //     self.changeWeapon(newWeapon);
     //   } else if (deltaY < 0) {
@@ -632,7 +632,7 @@ export default class GameplayScene extends Phaser.Scene {
   beginNewGame() {
     this.inputState = InputState.Playing;
     this.waitingForPlayerText.setText('');
-    this.changeWeapon(ShotType.Plain);
+    this.changeWeapon(ShotType.VShot);
 
     this.joystickJustPressed = false;
     this.spaceWasDown  = false;
@@ -699,6 +699,7 @@ export default class GameplayScene extends Phaser.Scene {
   update(time, delta) {
     this.accumulatedTime += delta;
     if (this.accumulatedTime > Constants.Timestep) {
+      this.accumulatedTime -= Constants.Timestep;
 
       if (this.aiPlayer) {
         this.aiPlayer.update();
@@ -711,12 +712,8 @@ export default class GameplayScene extends Phaser.Scene {
         '\r\nStalling: ' + this.rollbackNetcode.shouldStall();
       }
       this.latencyText.setText(text);
-      this.accumulatedTime -= Constants.Timestep;
 
       if (this.inputState == InputState.Playing) {
-
-        //this.handlePlayerInput(timeIntoUpdate);
-
 
         // Update the health indicators
         this.updateIndicators();
@@ -916,7 +913,7 @@ export default class GameplayScene extends Phaser.Scene {
     // Update the button so it looks highlighted.
     for (var i = 0; i < this.weaponSelectbuttons.length; i++) {
       let button = this.weaponSelectbuttons[i];
-      let shotType = ShotType.Plain + i;
+      let shotType = ShotType.VShot + i;
 
       if (shotType == newWeapon) {
         // This button is the selected weapon.

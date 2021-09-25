@@ -15,35 +15,39 @@ import Constants from "./constants.js";
 var ShotDefinitions;// : ShotDefinition[];
 
 ShotDefinitions = [];
-ShotDefinitions[ShotType.Plain] = {
-  Type: ShotType.Plain,
+ShotDefinitions[ShotType.VShot] = {
+  Type: ShotType.VShot,
   Speed: 50,
   Radius: 5,
   Damage: 10,
   EnergyReq: 7,
   Color: 0xff6f00,
   MouseAim: false,
-  ReloadSpeed: 160,
+  ReloadSpeed: 300,
+  NumExtraShots: 2,
+  SpreadX: 35,
+  SpreadY: 35,
 }
 ShotDefinitions[ShotType.BigSlow] = {
   Type: ShotType.BigSlow,
   Speed: 15,
   Radius: 15,
   Damage: 10,
-  EnergyReq: 10,
+  EnergyReq: 14,
   Color: 0x88c289,
   MouseAim: true,
-  ReloadSpeed: 320,
+  ReloadSpeed: 500,
+  NumShots: 3,
 }
 
-ShotDefinitions[ShotType.Multishot] = {
-  Type: ShotType.Multishot,
+ShotDefinitions[ShotType.SpreadShot] = {
+  Type: ShotType.SpreadShot,
   Speed: 15,
   Radius: 15,
   Damage: 10,
   EnergyReq: 30,
   Color: 0xfc8803,
-  MouseAim: false,
+  MouseAim: true,
   ReloadSpeed: 600,
   NumProjectiles: 6,
   SpreadAngle: 15 * Math.PI/180,

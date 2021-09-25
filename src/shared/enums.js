@@ -1,8 +1,8 @@
 export const ShotType = {
   None: 1,
-  Plain: 2,
+  VShot: 2,
   BigSlow: 3,
-  Multishot: 4,
+  SpreadShot: 4,
   DelayedShot: 5,
   Turret: 6,
 }

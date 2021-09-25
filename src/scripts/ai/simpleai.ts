@@ -154,14 +154,15 @@ export default class SimpleAI {
         minDist = 20;
       }
       if (Math.abs(me.y - you.y) < minDist) {
-        input.Shot = ShotType.Plain;
+        input.Shot = ShotType.VShot;
       }
 
       if (input.Shot == ShotType.None) {
         let leftBound = Constants.PlayAreaWidth / 2 + Constants.NoMansZoneWidth / 2;
         let halfway = (Constants.PlayAreaWidth - leftBound) / 2;
         if (me.x > leftBound + halfway && me.energy > 50) {
-          input.Shot = ShotType.Multishot;
+          input.Shot = ShotType.SpreadShot;
+          input.AimAngle = (me.facingDirection == 1) ? 0 : Math.PI;
         } else {
           input.Shot = ShotType.BigSlow;
           let angleToYou = Math.atan2(you.y - me.y, you.x - me.x)
