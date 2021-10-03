@@ -4,6 +4,8 @@ import PreloadScene from './scenes/preloadScene'
 import MainMenuScene from './scenes/mainmenu';
 import HowToPlayScene from './scenes/howtoplayscene';
 
+import UIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
+
 const DEFAULT_WIDTH = 1580
 const DEFAULT_HEIGHT = 920
 
@@ -20,6 +22,13 @@ const config = {
   scene: [PreloadScene, MainMenuScene, GameplayScene, HowToPlayScene],
   dom: {
     createContainer: true
+  },
+  plugins: {
+    scene: [{
+      key: 'rexUI',
+      plugin: UIPlugin,
+      mapping: 'rexUI',
+    }]
   },
   callbacks: {
     postBoot: function(game) {

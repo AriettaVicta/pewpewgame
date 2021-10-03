@@ -17,6 +17,7 @@ var ShotDefinitions;// : ShotDefinition[];
 ShotDefinitions = [];
 ShotDefinitions[ShotType.VShot] = {
   Type: ShotType.VShot,
+  FriendlyName: 'V-Shot',
   Speed: 50,
   Radius: 5,
   Damage: 10,
@@ -30,6 +31,7 @@ ShotDefinitions[ShotType.VShot] = {
 }
 ShotDefinitions[ShotType.BigSlow] = {
   Type: ShotType.BigSlow,
+  FriendlyName: 'Triple Shot',
   Speed: 15,
   Radius: 15,
   Damage: 10,
@@ -42,6 +44,7 @@ ShotDefinitions[ShotType.BigSlow] = {
 
 ShotDefinitions[ShotType.SpreadShot] = {
   Type: ShotType.SpreadShot,
+  FriendlyName: 'Spread Shot',
   Speed: 15,
   Radius: 15,
   Damage: 10,
@@ -55,6 +58,7 @@ ShotDefinitions[ShotType.SpreadShot] = {
 
 ShotDefinitions[ShotType.DelayedShot] = {
   Type: ShotType.DelayedShot,
+  FriendlyName: 'Delayed Missile',
   Speed: 80,
   Radius: 5,
   Damage: 10,
@@ -67,6 +71,7 @@ ShotDefinitions[ShotType.DelayedShot] = {
 
 ShotDefinitions[ShotType.Turret] = {
   Type: ShotType.Turret,
+  FriendlyName: 'Turret',
   Radius: 15,
   EnergyReq: 50,
   Color: 0xd447ff,
@@ -78,6 +83,24 @@ ShotDefinitions[ShotType.Turret] = {
   TurretProjectile: ShotType.BigSlow,
 }
 
+
+ShotDefinitions[ShotType.Laser] = {
+  Type: ShotType.Laser,
+  FriendlyName: 'Laser',
+  Width: 30,
+  Damage: 0.5,
+  EnergyReq: 70,
+  Color: 0xF0F8FE,//0x5ef5ff,
+  MouseAim: false,
+  ReloadSpeed: 7000,
+  IgnoreBoundsCollision: true,
+  PersistsOnHit: true,
+
+  ChargeTime: 2000,
+  ShotDuration: 3500,
+  SlowAmount: 0.5,
+
+}
 
 
 export default ShotDefinitions;

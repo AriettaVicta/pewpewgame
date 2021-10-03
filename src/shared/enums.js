@@ -1,10 +1,16 @@
 export const ShotType = {
   None: 1,
+
+  First: 2,
+
   VShot: 2,
   BigSlow: 3,
   SpreadShot: 4,
   DelayedShot: 5,
   Turret: 6,
+  Laser: 7,
+  
+  Last: 7,
 }
 
 

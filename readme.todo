@@ -14,11 +14,23 @@ Types of shots/abilities
 Health bar
 Magic power bar - regenerates, used to shoot
 
-New ideas:
-  ✔ Change single bullet to a V shaped spray @done(21-09-25 16:42)
-  ✔ Change slow bullet to 3 in a line that move at different speeds @done(21-09-25 16:11)
-    ✔ Turret shoots these and shoots more/faster @done(21-09-25 16:18)
-  ✔ Aim spread shot @done(21-09-25 16:24)
+Laser Implementation:
+  ✔ Figure out inheritance for the different bullet graphic objects @done(21-09-25 18:41)
+  ✔ Slows player while charging/shooting @done(21-10-02 16:13)
+  ✔ Collision only when active @done(21-10-02 16:05)
+  ✔ Figure out how damage works if you're in the laser @done(21-10-02 16:05)
+  ✔ Graphic showing charge up time @done(21-10-02 16:05)
+
+Wide-2 shot gun:
+  ☐ Shoots 2 bullets straight out from your sides
+
+Loadout selection:
+  ✔ 4 slots you can pick what's in it with a dropdown menu @done(21-10-02 17:25)
+  ✔ Selecting something that's in another slot swaps slots @done(21-10-02 17:25)
+
+Bugs:
+  ☐ When near your wall, V shot extra bullets disappear immediately
+  ☐ Somehow you can shoot bigslow bullets from vshot????
 
 Objectives to encourage movement:
   ☐ Collect dots for points
@@ -67,6 +79,10 @@ Sound Effects:
   ☐ Exploding
 
 
+
+
+
+  
 
 Weapon Ideas:
   ☐ Super fast shot - high energy requirement

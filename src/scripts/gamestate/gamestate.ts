@@ -69,8 +69,15 @@ export class GameState extends NetplayState<GameInput> {
   }
 
   playerMove(player : PlayerState, input : GameInput) {
-    player.x += Math.cos(input.Angle) * input.PercentSpeed * Constants.CharacterSpeedPixelsPerFrame;
-    player.y += Math.sin(input.Angle) * input.PercentSpeed * Constants.CharacterSpeedPixelsPerFrame;
+
+    let speed = Constants.CharacterSpeedPixelsPerFrame;
+    if (player.slowDuration > 0) {
+      speed *= player.slowAmount;
+      player.slowDuration -= Constants.Timestep;
+    }
+
+    player.x += Math.cos(input.Angle) * input.PercentSpeed * speed;
+    player.y += Math.sin(input.Angle) * input.PercentSpeed * speed;
 
     // Respect boundaries
     let topBound = 0;
@@ -130,6 +137,10 @@ export class GameState extends NetplayState<GameInput> {
             angle = input.AimAngle;
           }
           this.shootVShot(player.x, player.y, player.radius, player.facingDirection, player.id, angle);
+
+        } else if (input.Shot == ShotType.Laser) {
+
+          this.shootLaser(player, player.x, player.y, player.radius, player.facingDirection, player.id);
 
         } else {
           let angle = (player.facingDirection == 1) ? 0 : Math.PI;
@@ -238,7 +249,6 @@ export class GameState extends NetplayState<GameInput> {
 
   shootVShot(startX, startY, startRadius, startFacingDirection, id, aimAngle) {
 
-
     // 
     // Shoot the middle shot first,
     // then shoot the outer shots 2 at a time moving the offset.
@@ -298,12 +308,34 @@ export class GameState extends NetplayState<GameInput> {
       yOffset += spreadY;
     }
   }
+
+  shootLaser(player : PlayerState, startX, startY, startRadius, startFacingDirection, id) {
+
+    let bulletX = startX + (startRadius * startFacingDirection);
+    let bulletY = startY;
+
+    let angle = (startFacingDirection == 1) ? 0 : Math.PI;
+
+    let newBullet = new BulletState(
+      this.NextBulletId++,
+      id,
+      angle,
+      ShotType.Laser,
+      bulletX,
+      bulletY
+    );
+      
+    this.Bullets.push(newBullet);
+
+    // Apply slow to player
+    player.slowDuration = ShotDefinitions[ShotType.Laser].ChargeTime + ShotDefinitions[ShotType.Laser].ShotDuration;
+    player.slowAmount = ShotDefinitions[ShotType.Laser].SlowAmount;
+  }
   
 
   updateEnergy() {
     this.regenEnergyForPlayer(this.Player1);
     this.regenEnergyForPlayer(this.Player2);
-    this.Player1.energy
   }
 
   regenEnergyForPlayer(player : PlayerState) {
@@ -354,19 +386,42 @@ export class GameState extends NetplayState<GameInput> {
             this.shootSlowShot(bullet.x, bullet.y, bullet.radius, me.facingDirection, me.id, angle);
           }
 
-          // let newBullet = new BulletState(
-          //   this.NextBulletId++,
-          //   me.id,
-          //   angle,
-          //   bulletTypeToShoot,
-          //   bullet.x,
-          //   bullet.y
-          // );
-          // this.Bullets.push(newBullet);
-
           bullet.turretDelayRemainingMs = ShotDefinitions[bullet.shotType].DelayBetweenShotMs
           bullet.turretProjectilesRemaining--;
           if (bullet.turretProjectilesRemaining == 0) {
+            // Destroy the bullet.
+            this.Bullets.splice(i, 1);
+          }
+        }
+      } else if (bullet.shotType == ShotType.Laser) {
+        holdPosition = true;
+
+        // Set laser base position to the player's x/y that shot it.
+        let playerWhoShotIt = this.Player2;
+        if (bullet.owner == this.Player1.id) {
+          playerWhoShotIt = this.Player1;
+        }
+
+        let offsetX = playerWhoShotIt.radius * 2;
+        if (bullet.angle != 0) {
+          offsetX *= -1;
+        }
+        bullet.x = playerWhoShotIt.x + offsetX;
+        bullet.y = playerWhoShotIt.y;
+
+        if (bullet.chargeTimeRemaining > 0) {
+
+          bullet.chargeTimeRemaining -= Constants.Timestep;
+          if (bullet.chargeTimeRemaining < 0)
+          {
+            // Switch from charging to shooting
+          }
+        }
+
+        if (bullet.chargeTimeRemaining < 0 && bullet.shotTimeRemaining > 0) {
+          bullet.shotTimeRemaining -= Constants.Timestep;
+
+          if (bullet.shotTimeRemaining < 0) {
             // Destroy the bullet.
             this.Bullets.splice(i, 1);
           }
@@ -387,25 +442,29 @@ export class GameState extends NetplayState<GameInput> {
       }
 
       if (checkCollisionWithPlayer) {
-        if (CheckForCollisionBetweenCircles(bullet, checkCollisionWithPlayer)) {
+        if (CheckCollisionBetweenBulletAndPlayer(bullet, checkCollisionWithPlayer)) {
 
           this.takeDamage(checkCollisionWithPlayer, bullet.shotType);
 
+          if (!bullet.PersistsOnHit) {
+            // Delete the bullet.
+            this.Bullets.splice(i, 1);
+            continue;
+          }
+        }
+      }
+
+      if (!bullet.IgnoreBoundsCollision) {
+        // Check bounds collision
+        let topBound = 0;
+        let bottomBound = 0 + Constants.PlayAreaHeight;
+        let leftBound = 0;
+        let rightBound = 0 + Constants.PlayAreaWidth;
+        if (IsCircleOutOfBounds(bullet, leftBound, rightBound, topBound, bottomBound)) {
           // Delete the bullet.
           this.Bullets.splice(i, 1);
           continue;
         }
-      }
-
-      // Check bounds collision
-      let topBound = 0;
-      let bottomBound = 0 + Constants.PlayAreaHeight;
-      let leftBound = 0;
-      let rightBound = 0 + Constants.PlayAreaWidth;
-      if (IsCircleOutOfBounds(bullet, leftBound, rightBound, topBound, bottomBound)) {
-        // Delete the bullet.
-        this.Bullets.splice(i, 1);
-        continue;
       }
     }
   }
@@ -419,6 +478,35 @@ export class GameState extends NetplayState<GameInput> {
   }
 }
 
+function CheckCollisionBetweenBulletAndPlayer(bullet : BulletState, player : PlayerState) {
+
+  if (bullet.shotType == ShotType.Laser) {
+    // Check if active
+    if (bullet.chargeTimeRemaining < 0 && bullet.shotTimeRemaining > 0) {
+      // Bullet is active, check laser rectangle for collision
+      // Rectangle is ShotDefinitions[ShotType.Laser].Width and the X can just cover the whole board
+      let halfLaserWidth = ShotDefinitions[ShotType.Laser].Width / 2;
+
+      // if top of player is within laser
+      // or the bottom is within laser
+      // or if the middle is within the laser
+      let topOfPlayer = player.y - player.radius;
+      let bottomOfPlayer = player.y + player.radius;
+      let topOfLaser = bullet.y - halfLaserWidth;
+      let bottomOfLaser = bullet.y + halfLaserWidth;
+      if ((topOfPlayer > topOfLaser && topOfPlayer < bottomOfLaser) ||
+          (bottomOfPlayer > topOfLaser && bottomOfPlayer < bottomOfLaser) || 
+          (player.y > topOfLaser && player.y < bottomOfLaser)
+          ) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  } else {
+    return CheckForCollisionBetweenCircles(bullet, player);
+  }
+}
 
 function CheckForCollisionBetweenCircles(c1, c2) {
   return doCirclesOverlap(c1, c2);
@@ -497,4 +585,38 @@ function intersection(x0, y0, r0, x1, y1, r1) {
 }
 
 
+function sq(x) {
+  return x*x;
+}
+function findCircleLineIntersections(r, h, k, m, n) {
+  // circle: (x - h)^2 + (y - k)^2 = r^2
+  // line: y = m * x + n
+  // r: circle radius
+  // h: x value of circle centre
+  // k: y value of circle centre
+  // m: slope
+  // n: y-intercept
+
+  // get a, b, c values
+  var a = 1 + sq(m);
+  var b = -h * 2 + (m * (n - k)) * 2;
+  var c = sq(h) + sq(n - k) - sq(r);
+
+  // get discriminant
+  var d = sq(b) - 4 * a * c;
+  if (d >= 0) {
+      // insert into quadratic formula
+      var intersections = [
+          (-b + Math.sqrt(sq(b) - 4 * a * c)) / (2 * a),
+          (-b - Math.sqrt(sq(b) - 4 * a * c)) / (2 * a)
+      ];
+      if (d == 0) {
+          // only 1 intersection
+          return [intersections[0]];
+      }
+      return intersections;
+  }
+  // no intersection
+  return [];
+}
 

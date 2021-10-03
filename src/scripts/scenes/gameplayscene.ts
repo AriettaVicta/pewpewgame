@@ -20,6 +20,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { GameInput } from '../gamestate/types';
 import { GameState } from '../gamestate/gamestate';
 import SimpleAI from '../ai/simpleai';
+import BallGraphic from '../objects/ballgraphic';
+import LaserGraphic from '../objects/lasergraphic';
 
 const PING_INTERVAL = 100;
 
@@ -96,6 +98,7 @@ export default class GameplayScene extends Phaser.Scene {
 
   vsAI : boolean;
   aiPlayer : SimpleAI;
+  loadout : Array<number>;
 
   // Peer stuff
   peer : Peer | null;
@@ -301,37 +304,37 @@ export default class GameplayScene extends Phaser.Scene {
     if (this.keys.ONE.isDown) {
       this.oneWasDown = true;
     } else if (this.keys.ONE.isUp && this.oneWasDown) {
-      this.changeWeapon(ShotType.VShot);
+      this.changeWeapon(0);
       this.oneWasDown = false;
     }
 
     if (this.keys.TWO.isDown) {
       this.twoWasDown = true;
     } else if (this.keys.TWO.isUp && this.twoWasDown) {
-      this.changeWeapon(ShotType.BigSlow);
+      this.changeWeapon(1);
       this.twoWasDown = false;
     }
 
     if (this.keys.THREE.isDown) {
       this.threeWasDown = true;
     } else if (this.keys.THREE.isUp && this.threeWasDown) {
-      this.changeWeapon(ShotType.SpreadShot);
+      this.changeWeapon(2);
       this.threeWasDown = false;
     }
 
     if (this.keys.FOUR.isDown) {
       this.fourWasDown = true;
     } else if (this.keys.FOUR.isUp && this.fourWasDown) {
-      this.changeWeapon(ShotType.DelayedShot);
+      this.changeWeapon(3);
       this.fourWasDown = false;
     }
 
-    if (this.keys.FIVE.isDown) {
-      this.fiveWasDown = true;
-    } else if (this.keys.FIVE.isUp && this.fiveWasDown) {
-      this.changeWeapon(ShotType.Turret);
-      this.fiveWasDown = false;
-    }
+    // if (this.keys.FIVE.isDown) {
+    //   this.fiveWasDown = true;
+    // } else if (this.keys.FIVE.isUp && this.fiveWasDown) {
+    //   this.changeWeapon(ShotType.Turret);
+    //   this.fiveWasDown = false;
+    // }
 
     // Update angle based on the mouse line.
     input.AimAngle = this.mouseAimAngle;
@@ -345,6 +348,7 @@ export default class GameplayScene extends Phaser.Scene {
     var self = this;
 
     this.vsAI = this.game.MatchStartOptions.vsAI;
+    this.loadout = this.game.MatchStartOptions.loadout;
 
     // This is the peer server deployed as a standalone app.
     // const hostInfo = {
@@ -464,10 +468,10 @@ export default class GameplayScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     let weaponYOffset = 150;
     this.weaponSelectbuttons = [];
-    for (var i = ShotType.VShot; i <= ShotType.Turret; i++) {
+    for (var i = 0; i < Constants.WeaponLoadoutSize; i++) {
       let weapon = new TextButton(this, 
-        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 85, Constants.PlayAreaBufferY + 125 + weaponYOffset * (i - ShotType.VShot),
-        '' + (i - 1), 
+        Constants.PlayAreaBufferX + Constants.PlayAreaWidth + 85, Constants.PlayAreaBufferY + 125 + weaponYOffset * i,
+        '' + (i + 1), 
         (param) => {
           self.changeWeapon(param);
           self.mouseDown = false;
@@ -632,7 +636,7 @@ export default class GameplayScene extends Phaser.Scene {
   beginNewGame() {
     this.inputState = InputState.Playing;
     this.waitingForPlayerText.setText('');
-    this.changeWeapon(ShotType.VShot);
+    this.changeWeapon(0);
 
     this.joystickJustPressed = false;
     this.spaceWasDown  = false;
@@ -851,17 +855,24 @@ export default class GameplayScene extends Phaser.Scene {
         let graphicalBullet = this.bulletGraphics[j];
         if (bullet.id == graphicalBullet.id) {
           found = true;
-          graphicalBullet.x = bullet.x + Constants.PlayAreaBufferX;
-          graphicalBullet.y = bullet.y + Constants.PlayAreaBufferY;
+
+          // Update the graphical bullet
+          graphicalBullet.update(bullet);
           break;
         }
       }
 
       if (!found) {
-        let newGraphicalBullet = new BulletGraphic(this, bullet);
-        newGraphicalBullet.x = bullet.x + Constants.PlayAreaBufferX;
-        newGraphicalBullet.y = bullet.y + Constants.PlayAreaBufferY;
-        this.bulletGraphics.push(newGraphicalBullet);
+        // Create new graphical bullet
+        if (bullet.shotType == ShotType.Laser) {
+          let newGraphicalBullet = new LaserGraphic(this, bullet);
+          newGraphicalBullet.update(bullet);
+          this.bulletGraphics.push(newGraphicalBullet);
+        } else {
+          let newGraphicalBullet = new BallGraphic(this, bullet);
+          newGraphicalBullet.update(bullet);
+          this.bulletGraphics.push(newGraphicalBullet);
+        }
       }
     }
 
@@ -902,8 +913,9 @@ export default class GameplayScene extends Phaser.Scene {
     return this.gameState.Player1;
   }
 
-  changeWeapon(newWeapon : number) {
-    this.currentWeapon = newWeapon;
+  changeWeapon(weaponIndex : number) {
+    let shotType = this.loadout[weaponIndex];
+    this.currentWeapon = shotType;
     if (ShotDefinitions[this.currentWeapon].MouseAim) {
       this.mouseAimLine.setAlpha(1);
     } else {
@@ -913,9 +925,8 @@ export default class GameplayScene extends Phaser.Scene {
     // Update the button so it looks highlighted.
     for (var i = 0; i < this.weaponSelectbuttons.length; i++) {
       let button = this.weaponSelectbuttons[i];
-      let shotType = ShotType.VShot + i;
 
-      if (shotType == newWeapon) {
+      if (i == weaponIndex) {
         // This button is the selected weapon.
         button.setEnabled(false);
       } else {

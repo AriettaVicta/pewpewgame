@@ -35,6 +35,9 @@ export class PlayerState {
   dead : boolean;
   lastShotTime : Array<number>;
 
+  slowDuration : number;
+  slowAmount : number;
+
   constructor(id, x, y, radius, leftBound, rightBound, facingDirection) {
 
     this.x = x;
@@ -67,6 +70,8 @@ export class BulletState {
 
     this.radius = ShotDefinitions[shotType].Radius;
     this.speed = ShotDefinitions[shotType].Speed;
+    this.IgnoreBoundsCollision = ShotDefinitions[shotType].IgnoreBoundsCollision;
+    this.PersistsOnHit = ShotDefinitions[shotType].PersistsOnHit;
 
     if (shotType == ShotType.DelayedShot) {
       this.delayTime = ShotDefinitions[shotType].DelayTimeMs;
@@ -75,6 +80,10 @@ export class BulletState {
       this.turretDelayRemainingMs = ShotDefinitions[shotType].DelayBetweenShotMs;
       this.turretProjectilesRemaining = ShotDefinitions[shotType].NumProjectiles;
       this.turretProjectile = ShotDefinitions[shotType].TurretProjectile;
+    } else if (shotType == ShotType.Laser) {
+      this.chargeTimeRemaining = ShotDefinitions[shotType].ChargeTime;
+      this.shotTimeRemaining = ShotDefinitions[shotType].ShotDuration;
+      this.slowAmount = ShotDefinitions[shotType].SlowAmount;
     }
   }
 
@@ -89,6 +98,9 @@ export class BulletState {
   y : number;
   radius : number;
 
+  IgnoreBoundsCollision : boolean;
+  PersistsOnHit : boolean;
+
   // DelayedShot
   delayTime : number;
   calculatedAngle: boolean;
@@ -97,4 +109,10 @@ export class BulletState {
   turretDelayRemainingMs : number;
   turretProjectilesRemaining : number;
   turretProjectile : number;
+
+  // Laser
+  chargeTimeRemaining : number;
+  shotTimeRemaining : number;
+  slowAmount : number;
+
 }

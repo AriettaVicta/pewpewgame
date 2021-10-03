@@ -17,7 +17,7 @@ export default {
   CharacterStartingEnergy: 50,
   CharacterMaxEnergy: 100,
   CharacterRegenEnergyAmountPerSecond: 3,
-
+  WeaponLoadoutSize: 4,
   ServerUpdateMs: 100,
 
   TargetFrameTime: 16.6666,
